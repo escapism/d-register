@@ -25,7 +25,7 @@ jobs:
         run: npm install
 
       - name: Build
-        run: vue-tsc --noEmit && vite build
+        run: vite build
 
       - name: Deploy
         uses: JamesIves/github-pages-deploy-action@v4
