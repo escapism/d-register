@@ -1,0 +1,47 @@
+import Dexie, { type Table } from 'dexie';
+
+export interface Product {
+  id?: number;
+  title: string;
+  price: number;
+  stock: number;
+  infinite_stock: boolean;
+  pubdate: string;
+  cost: number | null;
+  total_sales_amount: number;
+  image?: Blob | string;
+  sortOrder: number;
+  hidden: boolean;
+}
+
+export interface AppOption {
+  key: string;
+  value: any;
+}
+
+export interface Sale {
+  id?: number;
+  transactionId: string;
+  productId: number;
+  timestamp: Date;
+  productTitle: string;
+  quantity: number;
+  priceAtSale: number;
+}
+
+export class MyDatabase extends Dexie {
+  products!: Table<Product>;
+  options!: Table<AppOption>;
+  sales!: Table<Sale>;
+
+  constructor() {
+    super('DRegi');
+    this.version(1).stores({
+      products: '++id, title, sortOrder, hidden',
+      options: 'key',
+      sales: '++id, productId, transactionId, timestamp'
+    });
+  }
+}
+
+export const db = new MyDatabase();
