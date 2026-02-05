@@ -134,7 +134,7 @@ const importAllData = async (e: Event) => {
   try {
     const data = await importFromJson(file);
 
-    await db.transaction("rw", [db.options, db.products], async () => {
+    await db.transaction("rw", [db.options, db.products, db.sales], async () => {
       await db.options.clear();
       await db.products.clear();
       await db.sales.clear();
