@@ -25,7 +25,6 @@ onMounted(async () => {
     db.products.orderBy("sortOrder").toArray(),
     db.options.get("circleName"),
   ]);
-  console.log(pData, nameOpt)
 
   products.value = pData;
   if (nameOpt) circleName.value = nameOpt.value;

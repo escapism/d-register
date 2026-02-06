@@ -28,7 +28,7 @@ if (!localStorage.getItem("confirmed")) {
     </section>
     <section>
       <h2>📈 アクセス解析</h2>
-      <p>このアプリでは、利用状況の把握のため、Google Analytics を使用してアクセスログを収集していますが、これはアプリ内のデータや個人を特定できるような情報は含みません。</p>
+      <p>このアプリでは、利用状況の把握のため、Google Analytics を使用してアクセスログを収集しています。これはアプリ内のデータや個人を特定できるような情報は含みません。</p>
     </section>
     <section>
       <h2>⚖️ 免責事項</h2>

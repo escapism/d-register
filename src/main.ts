@@ -29,8 +29,6 @@ if (import.meta.env.PROD && navigator.onLine) {
     vueRouter: router,
     trackOnNextTick: false,
   }));
-} else {
-  console.log("Offline mode: GTM loading skipped.");
 }
 
 app.use(router);
