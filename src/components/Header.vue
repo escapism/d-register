@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { ref, useTemplateRef, onMounted } from "vue";
+import { gtmTrackEvent } from "@/utils/gtm.ts"
 
 defineProps({
   circleName: String,
@@ -39,6 +40,7 @@ const toggleMenu = () => {
   } else {
     openMenu();
   }
+  gtmTrackEvent("toggle_menu")
 };
 
 const openMenu = () => {
@@ -54,6 +56,13 @@ const closeMenu = () => {
 const reload = () => {
   window.location.reload()
 };
+
+const handleHeaderBtn = (event : string) => {
+  if (event) {
+    gtmTrackEvent(event)
+  }
+  closeMenu()
+}
 </script>
 <template>
   <header class="site-header">
@@ -79,14 +88,14 @@ const reload = () => {
     </button>
     <router-link
       to="/"
-      @click="closeMenu"
+      @click="handleHeaderBtn('header_home_button')"
       class="header-btn home-btn"
       aria-label="レジスター"
       ><i-octicon-apps-24
     /></router-link>
     <router-link
       to="/admin"
-      @click="closeMenu"
+      @click="handleHeaderBtn('header_admin_button')"
       class="header-btn admin-btn"
       aria-label="頒布物登録"
       ><i-octicon-file-added-24

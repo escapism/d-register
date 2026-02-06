@@ -1,5 +1,6 @@
 <script setup lang="ts">
-import { ref, useTemplateRef, onMounted, watch, inject } from "vue";
+import { ref, onMounted, watch, inject, nextTick } from "vue";
+import { useRoute } from 'vue-router';
 import { db, type Product } from "@/db";
 import {
   convertToBase64,
@@ -10,12 +11,14 @@ import { formatProductForSave } from "@/utils/productHelper";
 import { exportToJson, importFromJson } from "@/composables/useFileIO";
 import draggable from "vuedraggable";
 import { EXPORT_DELAY } from "@/const/number";
+import { gtmTrackEvent, gtmTrackError } from "@/utils/gtm.ts"
 
-const openDialog = inject('globalDialog');
-const popped = inject('globalPopup');
-const loader = inject("globalLoader")
+const openDialog = inject("globalDialog");
+const popped = inject("globalPopup");
+const loader = inject("globalLoader");
 
-const metaRefs = ref([])
+const metaRefs = ref<Record<number, HTMLElement | null>>({});
+const route = useRoute();
 
 // UI管理用の拡張型
 interface EditableProduct extends Omit<Product, "image"> {
@@ -23,6 +26,15 @@ interface EditableProduct extends Omit<Product, "image"> {
   image?: Blob | string;
   showMeta?: boolean;
 }
+
+// テンプレート参照用の関数
+const setMetaRef = (el: any, id: number) => {
+  if (el) {
+    metaRefs.value[id] = el;
+  } else {
+    delete metaRefs.value[id];
+  }
+};
 
 const editableProducts = ref<EditableProduct[]>([]);
 const isSortMode = ref(false); // 並び替えモード
@@ -35,7 +47,7 @@ let saved = false;
 let tempId: number = 0;
 
 watch(isSaving, (val) => {
-  loader(val)
+  loader(val);
 
   if (val === false && saved) {
     popped("保存が完了しました");
@@ -125,8 +137,10 @@ const saveAll = async () => {
     });
     isImported.value = false;
     saved = true;
+    gtmTrackEvent("save_products");
   } catch (error) {
     console.error(error);
+    gtmTrackError("error_save_products")
     await openDialog("保存に失敗しました。再読込してください。");
   } finally {
     setTimeout(() => {
@@ -146,8 +160,10 @@ const exportJSON = async () => {
     setTimeout(() => {
       isExporting.value = false;
     }, EXPORT_DELAY);
+    gtmTrackEvent("export_products");
   } catch (err) {
     console.error(err);
+    gtmTrackError("error_export_products")
     await openDialog("エクスポートに失敗しました。");
     isExporting.value = false;
   }
@@ -173,8 +189,10 @@ const importJSON = async (e: Event) => {
     editableProducts.value = imported;
     tempId = imported.length;
     isImported.value = true; // インポートフラグ
+    gtmTrackEvent("import_products");
     await openDialog("インポートしました。保存ボタンを押すと確定します。");
   } catch (err) {
+    gtmTrackError("error_import_products")
     await openDialog("JSONの読み込みに失敗しました。");
   } finally {
     (e.target as HTMLInputElement).value = "";
@@ -192,6 +210,7 @@ const moveItem = (index: number, direction: "up" | "down") => {
   // 要素の入れ替え
   const item = editableProducts.value.splice(index, 1)[0];
   editableProducts.value.splice(newIndex, 0, item);
+  gtmTrackEvent("move_item")
 };
 
 // 入力欄の全選択
@@ -215,43 +234,48 @@ const addNewProduct = () => {
     showMeta: false, // 追加情報エリアは閉じた状態で作成
   });
 
-  setTimeout(() => {
+  gtmTrackEvent("add_product")
+
+  nextTick(() => {
     window.scrollTo(0, 0);
-  }, 10);
+  });
 };
 
 // 商品削除
 const removeProduct = (index: number) => {
   editableProducts.value.splice(index, 1);
+  gtmTrackEvent("remove_product")
 };
 
 // 表示切り替え関数
-const toggleMeta = (index: number) => {
-  const content = metaRefs.value[index]
-  if (!content) return
+const toggleMeta = (id: number, index: number) => {
+  const content = metaRefs.value[id];
+  if (!content) return;
+  const item = editableProducts.value[index];
 
-  if (editableProducts.value[index].showMeta) {
-    content.style.height = `${content.clientHeight}px`
+  if (item.showMeta) {
+    // 閉じるアニメーション
+    content.style.height = `${content.scrollHeight}px`;
     requestAnimationFrame(() => {
-      content.style.height = 0
-      content.style.marginTop = 0
-    })
+      content.style.height = 0;
+      content.style.marginTop = 0;
+    });
   } else {
-    content.style.transition = "none"
-    content.style.height = null
+    // 開くアニメーション
+    content.style.transition = "none";
+    content.style.height = "auto";
     requestAnimationFrame(() => {
-      const height = content.clientHeight
-      content.style.height = 0
+      const height = content.scrollHeight;
+      content.style.height = 0;
       requestAnimationFrame(() => {
-        content.style.transition = null
-        content.style.height = `${height}px`
-        content.style.marginTop = null
-      })
-    })
+        content.style.transition = null;
+        content.style.height = `${height}px`;
+        content.style.marginTop = null;
+      });
+    });
   }
-
-  editableProducts.value[index].showMeta =
-    !editableProducts.value[index].showMeta;
+  item.showMeta = !item.showMeta;
+  gtmTrackEvent("toggle_meta")
 };
 
 // ソート用関数
@@ -272,17 +296,20 @@ const sortProducts = () => {
     const idB = b.id ?? b.tempId ?? 0;
     return idB - idA; // IDが新しい順
   });
+
+  gtmTrackEvent("sort_products")
 };
 
 // 並び替えモードの切り替え
 const toggleSortMode = () => {
   isSortMode.value = !isSortMode.value;
+  gtmTrackEvent("toggle_sort_mode")
 };
 </script>
 
 <template>
   <div class="container page-container">
-    <h1 class="page-title"><i-octicon-file-added-24 /> 頒布物登録・編集</h1>
+    <h1 class="page-title"><i-octicon-file-added-24 /> {{ route.meta.title }}</h1>
 
     <div class="buttons">
       <button @click="exportJSON" class="btn btn-dl" :disabled="isExporting">
@@ -342,10 +369,7 @@ const toggleSortMode = () => {
       drag-class="drag"
     >
       <template #item="{ element: item, index }">
-        <div
-          :key="item.tempId"
-          class="edit-item"
-        >
+        <div :key="item.tempId" class="edit-item">
           <div
             v-if="isSortMode"
             class="drag-handle"
@@ -437,7 +461,7 @@ const toggleSortMode = () => {
                   v-if="item.hidden"
                   aria-label="非表示"
                 />
-                <input type="checkbox" v-model="item.hidden" />
+                <input type="checkbox" v-model="item.hidden" @change="gtmTrackEvent('toggle_visibility')" />
               </label>
               <div class="edit-item__order">
                 <button
@@ -471,12 +495,12 @@ const toggleSortMode = () => {
               <button
                 class="edit-item-meta__open"
                 :class="{ 'is-open': item.showMeta }"
-                @click="toggleMeta(index)"
+                @click="toggleMeta(item.tempId, index)"
               >
                 <i-octicon-plus-circle-16 /> 追加情報
               </button>
               <div
-                :ref="(el) => {metaRefs[index] = el}"
+                :ref="(el) => setMetaRef(el, item.tempId)"
                 class="edit-item-meta__content"
                 :aria-hidden="(!item.showMeta).toString()"
                 :inert="!item.showMeta"

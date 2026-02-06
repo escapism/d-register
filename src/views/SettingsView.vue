@@ -1,8 +1,12 @@
 <script setup lang="ts">
 import { ref, onMounted, watch, inject } from "vue";
+import { useRoute } from 'vue-router';
 import { db } from "@/db";
 import { exportToJson, importFromJson } from "@/composables/useFileIO";
 import { EXPORT_DELAY } from "@/const/number";
+import { gtmTrackEvent, gtmTrackError } from "@/utils/gtm.ts"
+
+const router = useRoute()
 
 const openDialog = inject('globalDialog');
 const popped = inject('globalPopup');
@@ -76,7 +80,9 @@ const saveSettings = async () => {
     });
 
     saved = true;
+    gtmTrackEvent("save_settings")
   } catch (e) {
+    gtmTrackError("error_save_settings")
     await openDialog("保存に失敗しました。再読込してください。");
   } finally {
     setTimeout(() => {
@@ -110,8 +116,10 @@ const exportAllData = async () => {
     setTimeout(() => {
       isExporting.value = false;
     }, EXPORT_DELAY);
+    gtmTrackEvent("export_app_data")
   } catch (err) {
     console.error(err);
+    gtmTrackError("error_export_app_data")
     await openDialog("エクスポートに失敗しました。");
     isExporting.value = false;
   }
@@ -155,10 +163,12 @@ const importAllData = async (e: Event) => {
       }
     });
 
+    gtmTrackEvent("import_app_data")
     await openDialog("インポートが完了しました。");
     window.location.reload(); // 整合性を保つためリロード
   } catch (err) {
     console.error(err);
+    gtmTrackError("error_import_app_data")
     await openDialog(
       "読み込みに失敗しました。正しいJSONファイルか確認してください。",
     );
@@ -181,10 +191,12 @@ const deleteAllData = async () => {
 
   try {
     await Promise.all([db.delete()]);
+    gtmTrackEvent("delete_app_data")
     await openDialog("すべてのデータを削除しました。");
     window.location.reload();
   } catch (e) {
     console.error(e);
+    gtmTrackError("error_delete_app_data")
     await openDialog("削除中にエラーが発生しました。");
   }
 };
@@ -192,7 +204,7 @@ const deleteAllData = async () => {
 
 <template>
   <div class="container page-container">
-    <h1 class="page-title"><i-octicon-gear-24 /> 設定</h1>
+    <h1 class="page-title"><i-octicon-gear-24 /> {{ router.meta.title }}</h1>
 
     <table class="setting-table">
       <tbody>
@@ -249,7 +261,7 @@ const deleteAllData = async () => {
       </p>
       <div class="export-options">
         <label class="checkbox-label">
-          <input type="checkbox" v-model="includeSales" />
+          <input type="checkbox" v-model="includeSales" @change="gtmTrackEvent('toggle_include_sales')" />
           売上データも含めて書き出す
         </label>
       </div>

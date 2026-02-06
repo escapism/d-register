@@ -1,6 +1,10 @@
+<script setup lang="ts">
+import { useRoute } from 'vue-router';
+const router = useRoute()
+</script>
 <template>
   <div class="container page-container">
-    <h1 class="page-title"><i-octicon-info-24 /> このアプリについて</h1>
+    <h1 class="page-title"><i-octicon-info-24 /> {{ router.meta.title }}</h1>
     <p>「Dレジ」は、主に同人誌即売会での利用を想定したレジアプリです。</p>
     <p>データはすべてデバイス上に保存されるので、サーバーとの通信を必要としません。<br>
       一度読み込んでおけば、オフラインでも動くため、電波の悪い会場でも使用できます。</p>

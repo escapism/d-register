@@ -23,7 +23,7 @@ if (import.meta.env.PROD && navigator.onLine) {
     id: import.meta.env.VITE_GTM_ID,
     defer: false, 
     compatibility: false,
-    enabled: true,
+    enabled: navigator.onLine,
     debug: false,
     loadScript: true,
     vueRouter: router,

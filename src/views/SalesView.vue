@@ -1,10 +1,14 @@
 <script setup lang="ts">
 import { ref, onMounted, computed, inject } from "vue";
+import { useRoute } from 'vue-router';
 import { db } from "@/db";
 import { EXPORT_DELAY } from "@/const/number";
 import { getDateString } from "@/utils/dateHelper";
+import { gtmTrackEvent, gtmTrackError } from "@/utils/gtm.ts";
 
-const openDialog = inject('globalDialog');
+const router = useRoute()
+
+const openDialog = inject("globalDialog");
 const products = ref<Product[]>([]);
 const sales = ref<any[]>([]);
 const circleName = ref("data");
@@ -81,53 +85,69 @@ const totalQuantity = computed(() =>
 );
 
 // 詳細CSV
-const downloadSalesCSV = () => {
+const downloadSalesCSV = async () => {
   if (isExporting.value) return;
   if (!sales.value || sales.value.length === 0)
     return openDialog("データがありません");
 
   isExporting.value = true;
 
-  let csv = "日時,商品名,単価,数量,小計,精算ID\n";
-  sales.value.forEach((s) => {
-    csv +=
-      [
-        new Date(s.timestamp).toLocaleString("ja-JP"),
-        `"${s.productTitle}"`,
-        s.priceAtSale,
-        s.quantity,
-        s.priceAtSale * s.quantity,
-        s.transactionId || "N/A",
-      ].join(",") + "\n";
-  });
+  try {
+    let csv = "日時,商品名,単価,数量,小計,精算ID\n";
+    sales.value.forEach((s) => {
+      csv +=
+        [
+          new Date(s.timestamp).toLocaleString("ja-JP"),
+          `"${s.productTitle}"`,
+          s.priceAtSale,
+          s.quantity,
+          s.priceAtSale * s.quantity,
+          s.transactionId || "N/A",
+        ].join(",") + "\n";
+    });
 
-  // 末尾に合計行を追加
-  csv += `\n"合計",,,${totalQuantity.value},${totalAmount.value},`;
+    // 末尾に合計行を追加
+    csv += `\n"合計",,,${totalQuantity.value},${totalAmount.value},`;
 
-  downloadFile(csv, getExportFileName("sales_detail"));
-  setTimeout(() => {
+    downloadFile(csv, getExportFileName("sales_detail"));
+    setTimeout(() => {
+      isExporting.value = false;
+    }, EXPORT_DELAY);
+    gtmTrackEvent("export_sales_detail");
+  } catch (err) {
+    console.error(err);
+    gtmTrackError("error_export_sales_detail");
+    await openDialog("エクスポートに失敗しました。");
     isExporting.value = false;
-  }, EXPORT_DELAY);
+  }
 };
 
 // 概要CSV（画面に表示している集計）
-const downloadSalesOverviewCSV = () => {
+const downloadSalesOverviewCSV = async () => {
   if (isExporting2.value) return;
   if (salesSummary.value.length === 0) return openDialog("データがありません");
 
   isExporting2.value = true;
 
-  let csv = "商品名,頒布数,合計金額\n";
-  salesSummary.value.forEach((s) => {
-    csv += [`"${s.title}"`, s.quantity, s.total].join(",") + "\n";
-  });
+  try {
+    let csv = "商品名,頒布数,合計金額\n";
+    salesSummary.value.forEach((s) => {
+      csv += [`"${s.title}"`, s.quantity, s.total].join(",") + "\n";
+    });
 
-  csv += `\n"合計",${totalQuantity.value},${totalAmount.value}`;
+    csv += `\n"合計",${totalQuantity.value},${totalAmount.value}`;
 
-  downloadFile(csv, getExportFileName("sales_overview"));
-  setTimeout(() => {
+    downloadFile(csv, getExportFileName("sales_overview"));
+    setTimeout(() => {
+      isExporting2.value = false;
+    }, EXPORT_DELAY);
+    gtmTrackEvent("export_sales_overview");
+  } catch (err) {
+    console.error(err);
+    gtmTrackError("error_export_sales_overview");
+    await openDialog("エクスポートに失敗しました。");
     isExporting2.value = false;
-  }, EXPORT_DELAY);
+  }
 };
 
 const downloadFile = (content: string, filename: string) => {
@@ -143,17 +163,32 @@ const downloadFile = (content: string, filename: string) => {
 
 // データ削除
 const deleteSales = async () => {
-  if (await openDialog({message: "売上データをすべて削除します。よろしいですか？", type: "confirm"})) {
-    await db.sales.clear();
-    await loadSales();
-    await openDialog("削除しました");
+  if (!sales.value || sales.value.length === 0)
+    return openDialog("データがありません");
+
+  if (
+    await openDialog({
+      message: "売上データをすべて削除します。よろしいですか？",
+      type: "confirm",
+    })
+  ) {
+    try {
+      await db.sales.clear();
+      gtmTrackEvent("delete_sales");
+      await loadSales();
+      await openDialog("削除しました");
+    } catch (err) {
+      console.error(err);
+      gtmTrackError("error_delete_sales");
+      await openDialog("削除に失敗しました。");
+    }
   }
 };
 </script>
 
 <template>
   <div class="container page-container">
-    <h1 class="page-title"><i-octicon-archive-24 /> 売上確認</h1>
+    <h1 class="page-title"><i-octicon-archive-24 /> {{ router.meta.title }}</h1>
     <div class="table-wrap">
       <table class="sales-table">
         <thead>

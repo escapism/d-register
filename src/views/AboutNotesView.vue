@@ -1,11 +1,14 @@
 <script setup lang="ts">
+import { useRoute } from 'vue-router';
+const router = useRoute()
+
 if (!localStorage.getItem("confirmed")) {
   localStorage.setItem("confirmed", "1");
 }
 </script>
 <template>
   <div class="container page-container">
-    <h1 class="page-title"><i-octicon-alert-24 /> ご利用上の注意</h1>
+    <h1 class="page-title"><i-octicon-alert-24 /> {{ router.meta.title }}</h1>
     <p>このアプリを利用するにあたって、あらかじめ「ホーム画面に追加」や「アプリのインストール」を行うことをおすすめします。</p>
 
       <ul class="haw-to-install">
@@ -28,7 +31,7 @@ if (!localStorage.getItem("confirmed")) {
     </section>
     <section>
       <h2>📈 アクセス解析</h2>
-      <p>このアプリでは、利用状況の把握のため、Google Analytics を使用してアクセスログを収集しています。これはアプリ内のデータや個人を特定できるような情報は含みません。</p>
+      <p>このアプリでは、利用状況の把握のため、Google Analytics を使用して情報の収集・分析を行っています。これらの情報には、アプリ内に保存されたデータや、個人を特定できるような情報は一切含みません。</p>
     </section>
     <section>
       <h2>⚖️ 免責事項</h2>

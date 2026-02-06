@@ -1,7 +1,10 @@
 <script setup lang="ts">
 import { ref, onMounted, computed, inject } from "vue";
+import { useRoute } from 'vue-router';
 import { db } from "@/db";
+import { gtmTrackEvent, gtmTrackError } from "@/utils/gtm.ts";
 
+const router = useRoute()
 const openDialog = inject("globalDialog");
 const sales = ref<any[]>([]);
 
@@ -49,9 +52,11 @@ const voidTransaction = async (tx: any) => {
       await db.sales.where("transactionId").equals(tx.id).delete();
     });
 
+    gtmTrackEvent("void_transaction")
     await openDialog("取り消しました。");
     await loadSales();
   } catch (e) {
+    gtmTrackError("error_void_transaction")
     await openDialog("エラーが発生しました。");
   }
 };
@@ -59,7 +64,7 @@ const voidTransaction = async (tx: any) => {
 
 <template>
   <div class="container page-container">
-    <h1 class="page-title"><i-octicon-history-24 /> 精算履歴・取消</h1>
+    <h1 class="page-title"><i-octicon-history-24 /> {{ router.meta.title }}</h1>
     <p class="description">
       直近の精算から順に表示しています。ミスがあった場合は「取消」ボタンで在庫を戻せます。
     </p>

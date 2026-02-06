@@ -1,9 +1,10 @@
 <script setup lang="ts">
-import { ref, useTemplateRef, watch, onMounted, computed, inject } from "vue";
+import { ref, watch, onMounted, computed, inject } from "vue";
 import { liveQuery } from "dexie";
 import { useObservable } from "@vueuse/rxjs";
 import { db } from "@/db";
 import { ulid } from "ulid";
+import { gtmTrackEvent, gtmTrackError } from "@/utils/gtm.ts"
 
 const openDialog = inject('globalDialog');
 const popped = inject('globalPopup');
@@ -70,17 +71,25 @@ const addOrder = (index: number) => {
   } else {
     order.value[index] = Math.min(order.value[index] + 1, item.stock);
   }
+  gtmTrackEvent("add_order")
 };
 
 const total = ref(0);
 
 const subOrder = (index) => {
   order.value[index] = Math.max(order.value[index] - 1, 0);
+  gtmTrackEvent("sub_order")
 };
 
 const zeroOrder = (index) => {
   order.value[index] = 0;
+  gtmTrackEvent("zero_order")
 };
+
+const handleClear = () => {
+  gtmTrackEvent("clear_total")
+  clearTotal()
+}
 
 const clearTotal = () => {
   if (!hasOrder.value) return;
@@ -139,10 +148,13 @@ const openCheckoutDialog = () => {
   isOpenCheckoutDialog.value = true
 };
 
-const closeCheckoutDialog = (clear = false) => {  
+const closeCheckoutDialog = (status : number) => {  
   isOpenCheckoutDialog.value = false
-  if (clear) {
+  if (status === 1) { // clear
     clearTotal()
+    gtmTrackEvent("clear_checkout")
+  } else if (status === 0) { // cancel
+    gtmTrackEvent("cancel_checkout")
   }
 };
 
@@ -158,7 +170,7 @@ const executeCheckout = async () => {
 
         // 1. 商品マスターの更新（在庫減 + 売上加算）
         await db.products.update(item.id, {
-          stock: item.stock - quantity,
+          stock: Math.max(0, item.stock - quantity),
           total_sales_amount:
             (item.total_sales_amount || 0) + item.price * quantity,
         });
@@ -176,10 +188,12 @@ const executeCheckout = async () => {
     });
 
     order.value = new Array(products.value.length).fill(0);
-    closeCheckoutDialog();
+    gtmTrackEvent("complete_checkout")
+    closeCheckoutDialog(-1);
     popped("精算完了しました");
   } catch (error) {
-    closeCheckoutDialog();
+    closeCheckoutDialog(-1);
+    gtmTrackError("error_checkout")
     await openDialog("精算エラーが発生しました。");
   }
 };
@@ -208,7 +222,7 @@ const clearReceivedAmount = () => {
     <section class="important-notice-box" v-if="!confirmed">
       <h3><strong>⚠️ 初めてご利用になる方へ</strong></h3>
       <p>
-        使用前に必ず<router-link to="/about/notes"
+        使用前に必ず<router-link to="/about/notes" @click="gtmTrackEvent('first_confirm')"
           >「ご利用上の注意」</router-link
         >をご確認ください。
       </p>
@@ -280,7 +294,7 @@ const clearReceivedAmount = () => {
     </button>
     <button
       class="clear-btn"
-      @click="clearTotal"
+      @click="handleClear"
       aria-label="クリア"
       :disabled="!hasOrder"
     >
@@ -288,7 +302,7 @@ const clearReceivedAmount = () => {
     </button>
   </div>
   <Transition name="fade">
-    <div v-if="isOpenCheckoutDialog" class="dialog-overlay" @click.self="closeCheckoutDialog(false)">
+    <div v-if="isOpenCheckoutDialog" class="dialog-overlay" @click.self="closeCheckoutDialog(0)">
   <div
     role="dialog"
     class="confirm-dialog"
@@ -342,8 +356,8 @@ const clearReceivedAmount = () => {
         </div>
       </div>
       <div class="button-area">
-        <button @click="closeCheckoutDialog(true)" class="btn btn-cancel">クリア</button>
-        <button @click="closeCheckoutDialog(false)" class="btn btn-cancel">キャンセル</button>
+        <button @click="closeCheckoutDialog(1)" class="btn btn-cancel">クリア</button>
+        <button @click="closeCheckoutDialog(0)" class="btn btn-cancel">キャンセル</button>
         <button @click="executeCheckout" class="btn btn-confirm">確定</button>
       </div>
     </div>
