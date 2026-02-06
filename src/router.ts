@@ -20,4 +20,14 @@ const router = createRouter({
     { path: '/about/notes', component: AboutNotesView, meta: {title: "ご利用上の注意"} },
   ]
 })
+
+router.afterEach((to) => {
+  window.dataLayer = window.dataLayer || [];
+  window.dataLayer.push({
+    event: 'content-view',
+    page_path: to.fullPath,
+    page_title: document.title
+  });
+});
+
 export default router

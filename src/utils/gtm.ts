@@ -2,6 +2,7 @@ import { useGtm } from '@gtm-support/vue-gtm';
 const gtm = useGtm();
 
 export function gtmTrackEvent(event : string): void {
+  console.log(gtm, { event })
   if (gtm) gtm.trackEvent({ event });
 }
 
