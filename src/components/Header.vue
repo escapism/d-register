@@ -5,31 +5,31 @@ defineProps({
   circleName: String,
 });
 
-const globalMenu = useTemplateRef("globalMenu");
+const globalNav = useTemplateRef("globalNav");
 const activeMenu = ref(false);
 const appVersion = ref(APP_VERSION)
 
 let touchStartX = 0;
 
 onMounted(() => {
-  globalMenu.value.addEventListener("touchstart", (e) => {
+  globalNav.value.addEventListener("touchstart", (e) => {
     touchStartX = e.changedTouches[0].screenX;
   });
 
-  globalMenu.value.addEventListener("touchmove", (e) => {
+  globalNav.value.addEventListener("touchmove", (e) => {
 
     const swipeDistance = touchStartX - e.changedTouches[0].screenX;
-    globalMenu.value.style.transition = "nune"
-    globalMenu.value.style.translate = `-${swipeDistance}px 0`;
+    globalNav.value.style.transition = "nune"
+    globalNav.value.style.translate = `-${swipeDistance}px 0`;
   });
 
-  globalMenu.value.addEventListener("touchend", (e) => {
+  globalNav.value.addEventListener("touchend", (e) => {
     const swipeDistance = touchStartX - e.changedTouches[0].screenX;
-    if (swipeDistance > globalMenu.value.clientWidth * 0.25) {
+    if (swipeDistance > globalNav.value.clientWidth * 0.25) {
       closeMenu();
     }
-    globalMenu.value.style.transition = null
-    globalMenu.value.style.translate = null
+    globalNav.value.style.transition = null
+    globalNav.value.style.translate = null
   });
 });
 
@@ -59,11 +59,10 @@ const reload = () => {
   <header class="site-header">
     <h1 v-if="circleName" class="circle-name">{{ circleName }}</h1>
     <button
-      id="menuButton"
-      class="header-btn"
+      class="header-btn menu-btn"
       aria-label="メニューを開く"
       @click="toggleMenu"
-      aria-controls="globalMenu"
+      aria-controls="globalNav"
       :aria-expanded="activeMenu ? 'true' : 'false'"
     >
       <svg viewBox="0 0 16 16" fill="currentColor">
@@ -93,7 +92,7 @@ const reload = () => {
       ><i-octicon-file-added-24
     /></router-link>
   </header>
-  <nav id="globalMenu" ref="globalMenu" :innert="activeMenu ? 'false' : 'true'">
+  <nav class="global-nav" ref="globalNav" :class="{'is-active': activeMenu}" :inert="!activeMenu">
     <ul class="menu-list">
       <li>
         <router-link to="/" @click="closeMenu"

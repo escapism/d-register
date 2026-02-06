@@ -26,6 +26,8 @@ jobs:
 
       - name: Build
         run: npm run build
+        env:
+          VITE_GTM_ID: ${{ secrets.VITE_GTM_ID }}
 
       - name: Deploy
         uses: JamesIves/github-pages-deploy-action@v4

@@ -114,7 +114,6 @@ watch(
 );
 
 // 注文ダイアログ
-const checkoutDialog = useTemplateRef("checkoutDialog");
 const receivedAmount = ref<number | null>(null);
 
 // 注文の内訳（個数が1以上のものだけ抽出）
@@ -141,7 +140,6 @@ const openCheckoutDialog = () => {
 };
 
 const closeCheckoutDialog = (clear = false) => {  
-  console.log(clear)
   isOpenCheckoutDialog.value = false
   if (clear) {
     clearTotal()
@@ -274,7 +272,7 @@ const clearReceivedAmount = () => {
   <div class="page-control checkout" v-if="existsProduct">
     <div class="total">{{ getTotal() }}円</div>
     <button
-      id="checkoutButton"
+      class="checkout-btn"
       @click="openCheckoutDialog"
       :disabled="!hasOrder"
     >
@@ -293,7 +291,6 @@ const clearReceivedAmount = () => {
     <div v-if="isOpenCheckoutDialog" class="dialog-overlay" @click.self="closeCheckoutDialog(false)">
   <div
     role="dialog"
-    ref="checkoutDialog"
     class="confirm-dialog"
   >
     <div class="dialog-content" @click.stop>

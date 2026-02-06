@@ -2,6 +2,7 @@
 import { ref, onMounted, computed, inject } from "vue";
 import { db } from "@/db";
 import { EXPORT_DELAY } from "@/const/number";
+import { getDateString } from "@/utils/dateHelper";
 
 const openDialog = inject('globalDialog');
 const products = ref<Product[]>([]);
@@ -21,10 +22,10 @@ onMounted(async () => {
   await loadSales();
 
   const [pData, nameOpt] = await Promise.all([
-    db.products.toArray(),
-    db.sales.toArray(),
+    db.products.orderBy("sortOrder").toArray(),
     db.options.get("circleName"),
   ]);
+  console.log(pData, nameOpt)
 
   products.value = pData;
   if (nameOpt) circleName.value = nameOpt.value;
@@ -32,12 +33,7 @@ onMounted(async () => {
 
 // ファイル名生成用のユーティリティ
 const getExportFileName = (prefix: string) => {
-  const now = new Date();
-  const dateStr =
-    now.getFullYear() +
-    String(now.getMonth() + 1).padStart(2, "0") +
-    String(now.getDate()).padStart(2, "0");
-  return `${prefix}_${circleName.value}_${dateStr}.csv`;
+  return `${prefix}_${circleName.value ? circleName.value + "_" : ""}${getDateString()}.csv`;
 };
 
 // 商品ごとの集計データを作成

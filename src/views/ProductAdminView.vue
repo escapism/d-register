@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, onMounted, watch, inject } from "vue";
+import { ref, useTemplateRef, onMounted, watch, inject } from "vue";
 import { db, type Product } from "@/db";
 import {
   convertToBase64,
@@ -14,6 +14,8 @@ import { EXPORT_DELAY } from "@/const/number";
 const openDialog = inject('globalDialog');
 const popped = inject('globalPopup');
 const loader = inject("globalLoader")
+
+const metaRefs = ref([])
 
 // UI管理用の拡張型
 interface EditableProduct extends Omit<Product, "image"> {
@@ -225,6 +227,29 @@ const removeProduct = (index: number) => {
 
 // 表示切り替え関数
 const toggleMeta = (index: number) => {
+  const content = metaRefs.value[index]
+  if (!content) return
+
+  if (editableProducts.value[index].showMeta) {
+    content.style.height = `${content.clientHeight}px`
+    requestAnimationFrame(() => {
+      content.style.height = 0
+      content.style.marginTop = 0
+    })
+  } else {
+    content.style.transition = "none"
+    content.style.height = null
+    requestAnimationFrame(() => {
+      const height = content.clientHeight
+      content.style.height = 0
+      requestAnimationFrame(() => {
+        content.style.transition = null
+        content.style.height = `${height}px`
+        content.style.marginTop = null
+      })
+    })
+  }
+
   editableProducts.value[index].showMeta =
     !editableProducts.value[index].showMeta;
 };
@@ -320,8 +345,6 @@ const toggleSortMode = () => {
         <div
           :key="item.tempId"
           class="edit-item"
-          :data-id="item.id"
-          :data-temp-id="item.tempId"
         >
           <div
             v-if="isSortMode"
@@ -453,8 +476,10 @@ const toggleSortMode = () => {
                 <i-octicon-plus-circle-16 /> 追加情報
               </button>
               <div
+                :ref="(el) => {metaRefs[index] = el}"
                 class="edit-item-meta__content"
                 :aria-hidden="(!item.showMeta).toString()"
+                :inert="!item.showMeta"
               >
                 <dl class="edit-item-meta-data">
                   <div class="edit-item-meta-data__item">

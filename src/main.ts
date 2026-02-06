@@ -3,6 +3,7 @@ import "./style.scss";
 import App from "./App.vue";
 import router from "./router.ts";
 import { registerSW } from "virtual:pwa-register";
+import { createGtm } from '@gtm-support/vue-gtm';
 
 // Service Workerの登録
 registerSW({
@@ -16,5 +17,21 @@ registerSW({
 });
 
 const app = createApp(App);
+
+if (import.meta.env.PROD && navigator.onLine) {
+  app.use(createGtm({
+    id: import.meta.env.VITE_GTM_ID,
+    defer: false, 
+    compatibility: false,
+    enabled: true,
+    debug: false,
+    loadScript: true,
+    vueRouter: router,
+    trackOnNextTick: false,
+  }));
+} else {
+  console.log("Offline mode: GTM loading skipped.");
+}
+
 app.use(router);
 app.mount("#app");
