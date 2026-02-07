@@ -193,7 +193,7 @@ const executeCheckout = async () => {
     popped("精算完了しました");
   } catch (error) {
     closeCheckoutDialog(-1);
-    gtmTrackError("error_checkout")
+    gtmTrackError("checkout")
     await openDialog("精算エラーが発生しました。");
   }
 };

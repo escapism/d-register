@@ -21,13 +21,4 @@ const router = createRouter({
   ]
 })
 
-router.afterEach((to) => {
-  window.dataLayer = window.dataLayer || [];
-  window.dataLayer.push({
-    event: 'content-view',
-    page_path: to.fullPath,
-    page_title: document.title
-  });
-});
-
 export default router

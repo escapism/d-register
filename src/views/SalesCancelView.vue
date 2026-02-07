@@ -56,7 +56,7 @@ const voidTransaction = async (tx: any) => {
     await openDialog("取り消しました。");
     await loadSales();
   } catch (e) {
-    gtmTrackError("error_void_transaction")
+    gtmTrackError("void_transaction")
     await openDialog("エラーが発生しました。");
   }
 };

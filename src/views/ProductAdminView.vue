@@ -140,7 +140,7 @@ const saveAll = async () => {
     gtmTrackEvent("save_products");
   } catch (error) {
     console.error(error);
-    gtmTrackError("error_save_products")
+    gtmTrackError("save_products")
     await openDialog("保存に失敗しました。再読込してください。");
   } finally {
     setTimeout(() => {
@@ -163,7 +163,7 @@ const exportJSON = async () => {
     gtmTrackEvent("export_products");
   } catch (err) {
     console.error(err);
-    gtmTrackError("error_export_products")
+    gtmTrackError("export_products")
     await openDialog("エクスポートに失敗しました。");
     isExporting.value = false;
   }
@@ -192,7 +192,7 @@ const importJSON = async (e: Event) => {
     gtmTrackEvent("import_products");
     await openDialog("インポートしました。保存ボタンを押すと確定します。");
   } catch (err) {
-    gtmTrackError("error_import_products")
+    gtmTrackError("import_products")
     await openDialog("JSONの読み込みに失敗しました。");
   } finally {
     (e.target as HTMLInputElement).value = "";

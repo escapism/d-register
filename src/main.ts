@@ -3,7 +3,7 @@ import "./style.scss";
 import App from "./App.vue";
 import router from "./router.ts";
 import { registerSW } from "virtual:pwa-register";
-import { createGtm } from '@gtm-support/vue-gtm';
+import { createGtm, useGtm } from '@gtm-support/vue-gtm';
 
 // Service Workerの登録
 registerSW({
@@ -24,12 +24,30 @@ if (import.meta.env.PROD && navigator.onLine) {
     defer: false, 
     compatibility: false,
     enabled: navigator.onLine,
-    debug: false,
+    debug: import.meta.env.DEV,
     loadScript: true,
-    vueRouter: router,
+    //vueRouter: router,
     trackOnNextTick: false,
   }));
 }
+
+function getURL(path) {
+  return location.origin + location.pathname.replace(/\/$/, "") + path
+}
+
+router.afterEach((to, from) => {
+  const title = (to.meta.title as string) || 'Dレジ';
+  document.title = title;
+  
+  const gtm = useGtm()
+  if (gtm) {
+    gtm.trackEvent({
+      event: "content-view",
+      page_referrer: getURL(from.fullPath),
+      page_location: getURL(to.fullPath)
+    })
+  }
+});
 
 app.use(router);
 app.mount("#app");

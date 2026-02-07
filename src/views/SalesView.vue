@@ -116,7 +116,7 @@ const downloadSalesCSV = async () => {
     gtmTrackEvent("export_sales_detail");
   } catch (err) {
     console.error(err);
-    gtmTrackError("error_export_sales_detail");
+    gtmTrackError("export_sales_detail");
     await openDialog("エクスポートに失敗しました。");
     isExporting.value = false;
   }
@@ -144,7 +144,7 @@ const downloadSalesOverviewCSV = async () => {
     gtmTrackEvent("export_sales_overview");
   } catch (err) {
     console.error(err);
-    gtmTrackError("error_export_sales_overview");
+    gtmTrackError("export_sales_overview");
     await openDialog("エクスポートに失敗しました。");
     isExporting2.value = false;
   }
@@ -179,7 +179,7 @@ const deleteSales = async () => {
       await openDialog("削除しました");
     } catch (err) {
       console.error(err);
-      gtmTrackError("error_delete_sales");
+      gtmTrackError("delete_sales");
       await openDialog("削除に失敗しました。");
     }
   }

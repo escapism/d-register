@@ -82,7 +82,7 @@ const saveSettings = async () => {
     saved = true;
     gtmTrackEvent("save_settings")
   } catch (e) {
-    gtmTrackError("error_save_settings")
+    gtmTrackError("save_settings")
     await openDialog("保存に失敗しました。再読込してください。");
   } finally {
     setTimeout(() => {
@@ -119,7 +119,7 @@ const exportAllData = async () => {
     gtmTrackEvent("export_app_data")
   } catch (err) {
     console.error(err);
-    gtmTrackError("error_export_app_data")
+    gtmTrackError("export_app_data")
     await openDialog("エクスポートに失敗しました。");
     isExporting.value = false;
   }
@@ -168,7 +168,7 @@ const importAllData = async (e: Event) => {
     window.location.reload(); // 整合性を保つためリロード
   } catch (err) {
     console.error(err);
-    gtmTrackError("error_import_app_data")
+    gtmTrackError("import_app_data")
     await openDialog(
       "読み込みに失敗しました。正しいJSONファイルか確認してください。",
     );
@@ -196,7 +196,7 @@ const deleteAllData = async () => {
     window.location.reload();
   } catch (e) {
     console.error(e);
-    gtmTrackError("error_delete_app_data")
+    gtmTrackError("delete_app_data")
     await openDialog("削除中にエラーが発生しました。");
   }
 };
