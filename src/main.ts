@@ -4,6 +4,7 @@ import App from "./App.vue";
 import router from "./router.ts";
 import { registerSW } from "virtual:pwa-register";
 import { createGtm, useGtm } from '@gtm-support/vue-gtm';
+import { getPageLocation } from "./utils/gtm.ts";
 
 // Service Workerの登録
 registerSW({
@@ -31,20 +32,15 @@ if (import.meta.env.PROD && navigator.onLine) {
   }));
 }
 
-function getURL(path) {
-  return location.origin + location.pathname.replace(/\/$/, "") + path
-}
-
 router.afterEach((to, from) => {
   const title = (to.meta.title as string) || 'Dレジ';
   document.title = title;
-  
   const gtm = useGtm()
   if (gtm) {
     gtm.trackEvent({
       event: "content-view",
-      page_referrer: getURL(from.fullPath),
-      page_location: getURL(to.fullPath)
+      page_referrer: getPageLocation(from.href),
+      page_location: getPageLocation(to.href)
     })
   }
 });

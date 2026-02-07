@@ -13,3 +13,8 @@ export function gtmTrackError(event: string): void {
     gtm.trackEvent({ event: "custom_event", event_name: `dr_error_${event}` });
   }
 }
+
+export function getPageLocation(href : string) {
+  if (href === undefined) return ""
+  return location.origin + location.pathname + href
+}
