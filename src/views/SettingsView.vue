@@ -1,16 +1,16 @@
 <script setup lang="ts">
 import { ref, onMounted, watch, inject } from "vue";
-import { useRoute } from 'vue-router';
+import { useRoute } from "vue-router";
 import { db } from "@/db";
 import { exportToJson, importFromJson } from "@/composables/useFileIO";
 import { EXPORT_DELAY } from "@/const/number";
-import { gtmTrackEvent, gtmTrackError } from "@/utils/gtm.ts"
+import { gtmTrackEvent, gtmTrackError } from "@/utils/gtm.ts";
 
-const router = useRoute()
+const router = useRoute();
 
-const openDialog = inject('globalDialog');
-const popped = inject('globalPopup');
-const loader = inject("globalLoader")
+const openDialog = inject("globalDialog");
+const popped = inject("globalPopup");
+const loader = inject("globalLoader");
 
 const circleName = ref("");
 const showStock = ref(true);
@@ -26,7 +26,7 @@ const includeSales = ref(false); // 売上データを含めるかどうか
 let saved = false;
 
 watch(isSaving, (val) => {
-  loader(val)
+  loader(val);
 
   if (val === false && saved) {
     popped("保存が完了しました");
@@ -34,8 +34,7 @@ watch(isSaving, (val) => {
   }
 });
 
-// 初期ロード
-onMounted(async () => {
+const loadOptions = async () => {
   const nameOpt = await db.options.get("circleName");
   if (nameOpt) circleName.value = nameOpt.value;
 
@@ -53,7 +52,19 @@ onMounted(async () => {
 
   const columnsOpt = await db.options.get("numCols");
   if (columnsOpt) threeColumns.value = columnsOpt.value === 3;
-});
+};
+
+const resetOptions = () => {
+  circleName.value = "";
+  showStock.value = true;
+  showSoldoutItems.value = true;
+  showCheckoutDialog.value = true;
+  showCalculator.value = true;
+  threeColumns.value = false;
+};
+
+// 初期ロード
+onMounted(loadOptions);
 
 // 設定保存
 const saveSettings = async () => {
@@ -80,9 +91,9 @@ const saveSettings = async () => {
     });
 
     saved = true;
-    gtmTrackEvent("save_settings")
+    gtmTrackEvent("save_settings");
   } catch (e) {
-    gtmTrackError("save_settings")
+    gtmTrackError("save_settings");
     await openDialog("保存に失敗しました。再読込してください。");
   } finally {
     setTimeout(() => {
@@ -98,6 +109,7 @@ const exportAllData = async () => {
   try {
     const products = await db.products.toArray();
     const options = await db.options.toArray();
+    let dataExists = products.length || options.length;
 
     // エクスポート用データオブジェクトの作成
     const exportData: any = {
@@ -110,16 +122,22 @@ const exportAllData = async () => {
     if (includeSales.value) {
       const sales = await db.sales.toArray();
       exportData.sales = sales;
+      dataExists = dataExists || sales.length;
+    }
+    if (!dataExists) {
+      await openDialog("データがありません");
+      isExporting.value = false;
+      return;
     }
 
     await exportToJson(exportData, `backup`);
     setTimeout(() => {
       isExporting.value = false;
     }, EXPORT_DELAY);
-    gtmTrackEvent("export_app_data")
+    gtmTrackEvent("export_app_data");
   } catch (err) {
     console.error(err);
-    gtmTrackError("export_app_data")
+    gtmTrackError("export_app_data");
     await openDialog("エクスポートに失敗しました。");
     isExporting.value = false;
   }
@@ -132,8 +150,7 @@ const importAllData = async (e: Event) => {
 
   if (
     !(await openDialog({
-      message:
-        "アプリ内のすべてのデータが上書きされます。よろしいですか？",
+      message: "アプリ内のすべてのデータが上書きされます。よろしいですか？",
       type: "confirm",
     }))
   )
@@ -142,33 +159,38 @@ const importAllData = async (e: Event) => {
   try {
     const data = await importFromJson(file);
 
-    await db.transaction("rw", [db.options, db.products, db.sales], async () => {
-      await db.options.clear();
-      await db.products.clear();
-      await db.sales.clear();
+    await db.transaction(
+      "rw",
+      [db.options, db.products, db.sales],
+      async () => {
+        await db.options.clear();
+        await db.products.clear();
+        await db.sales.clear();
 
-      // 1. 設定値 (options) の上書き
-      if (data.options) {
-        await db.options.bulkPut(data.options);
-      }
+        // 1. 設定値 (options) の上書き
+        if (data.options) {
+          await db.options.bulkPut(data.options);
+        }
 
-      // 2. 頒布物 (products) の上書き
-      if (data.products) {
-        await db.products.bulkPut(data.products);
-      }
+        // 2. 頒布物 (products) の上書き
+        if (data.products) {
+          await db.products.bulkPut(data.products);
+        }
 
-      // 売上データがJSONに含まれている場合のみ処理
-      if (data.sales && Array.isArray(data.sales)) {
-        await db.sales.bulkPut(data.sales);
-      }
-    });
+        // 売上データがJSONに含まれている場合のみ処理
+        if (data.sales && Array.isArray(data.sales)) {
+          await db.sales.bulkPut(data.sales);
+        }
+      },
+    );
 
-    gtmTrackEvent("import_app_data")
+    gtmTrackEvent("import_app_data");
     await openDialog("インポートが完了しました。");
-    window.location.reload(); // 整合性を保つためリロード
+    // window.location.reload(); // 整合性を保つためリロード
+    await loadOptions();
   } catch (err) {
     console.error(err);
-    gtmTrackError("import_app_data")
+    gtmTrackError("import_app_data");
     await openDialog(
       "読み込みに失敗しました。正しいJSONファイルか確認してください。",
     );
@@ -190,13 +212,15 @@ const deleteAllData = async () => {
     return;
 
   try {
-    await Promise.all([db.delete()]);
-    gtmTrackEvent("delete_app_data")
+    await db.delete();
+    gtmTrackEvent("delete_app_data");
     await openDialog("すべてのデータを削除しました。");
-    window.location.reload();
+    //window.location.reload();
+    await db.open();
+    resetOptions();
   } catch (e) {
     console.error(e);
-    gtmTrackError("delete_app_data")
+    gtmTrackError("delete_app_data");
     await openDialog("削除中にエラーが発生しました。");
   }
 };
@@ -261,7 +285,11 @@ const deleteAllData = async () => {
       </p>
       <div class="export-options">
         <label class="checkbox-label">
-          <input type="checkbox" v-model="includeSales" @change="gtmTrackEvent('toggle_include_sales')" />
+          <input
+            type="checkbox"
+            v-model="includeSales"
+            @change="gtmTrackEvent('toggle_include_sales')"
+          />
           売上データも含めて書き出す
         </label>
       </div>

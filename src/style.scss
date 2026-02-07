@@ -1365,6 +1365,12 @@ main {
   }
 }
 
+.deleted {
+  position: relative;
+  top: 0.12em;
+  margin-right: 0.25em;
+}
+
 .untitled {
   color: var(--grey);
 }

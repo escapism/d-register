@@ -156,6 +156,12 @@ const exportJSON = async () => {
 
   try {
     const products = await db.products.toArray();
+    if (!products.length) {
+      await openDialog("データがありません");
+      isExporting.value = false;
+      return
+    }
+
     await exportToJson(products, `products_backup`);
     setTimeout(() => {
       isExporting.value = false;

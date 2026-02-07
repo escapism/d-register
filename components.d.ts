@@ -40,6 +40,7 @@ declare module 'vue' {
     IOcticonSync24: typeof import('~icons/octicon/sync24')['default']
     IOcticonTrash24: typeof import('~icons/octicon/trash24')['default']
     IOcticonUpload16: typeof import('~icons/octicon/upload16')['default']
+    IOcticonX24: typeof import('~icons/octicon/x24')['default']
     IOcticonXCircleFill16: typeof import('~icons/octicon/x-circle-fill16')['default']
     Loader: typeof import('./src/components/Loader.vue')['default']
     Popup: typeof import('./src/components/Popup.vue')['default']

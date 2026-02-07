@@ -26,10 +26,9 @@ onMounted(async () => {
   await loadSales();
 
   const [pData, nameOpt] = await Promise.all([
-    db.products.orderBy("sortOrder").toArray(),
+    db.products.toArray(),
     db.options.get("circleName"),
   ]);
-
   products.value = pData;
   if (nameOpt) circleName.value = nameOpt.value;
 });
@@ -41,35 +40,49 @@ const getExportFileName = (prefix: string) => {
 
 // 商品ごとの集計データを作成
 const salesSummary = computed(() => {
-  return (
-    products.value
-      .map((p) => {
-        // 1. この商品の販売レコードを抽出 (productId または title で紐付け)
-        const itemSales = sales.value.filter(
-          (s) => s.productId === p.id || s.productTitle === p.title,
-        );
+  // 1. 売上データから、商品IDごとにグループ化する
+  // (削除されたものも含め、売上がある全商品を網羅する)
+  const groupedSales = sales.value.reduce((acc, s) => {
+    const id = s.productId;
+    if (!acc[id]) {
+      acc[id] = {
+        id: id,
+        title: s.productTitle, // 売上記録時の名称を初期値にする
+        quantity: 0,
+        total: 0,
+        priceAtSale: s.priceAtSale // 完済計算用に使う（直近の価格）
+      };
+    }
+    acc[id].quantity += s.quantity;
+    acc[id].total += (s.priceAtSale * s.quantity);
+    return acc;
+  }, {} as Record<number, any>);
 
-        // 2. 数量の合計を計算
-        const quantity = itemSales.reduce((sum, s) => sum + s.quantity, 0);
+  // 2. 集計したデータを配列にし、現存する商品情報とマージする
+  const summary = Object.values(groupedSales).map((soldItem: any) => {
+    // マスターデータ(products)から現在の情報を探す
+    const currentProduct = products.value.find(p => p.id === soldItem.id);
+    
+    // 印刷費。マスターになければ売上データからは不明なので0（または計算から除外）
+    const cost = currentProduct?.cost || 0;
+    const isPaidOff = cost > 0 ? soldItem.total >= cost : false;
 
-        // 3. 完済（ペイ）判定
-        const isPaidOff =
-          p.cost && p.cost > 0 ? (p.total_sales_amount || 0) >= p.cost : false;
+    return {
+      id: soldItem.id,
+      // マスターに商品があれば最新のタイトル、なければ売上時のタイトル
+      title: currentProduct ? currentProduct.title : soldItem.title,
+      quantity: soldItem.quantity,
+      total: soldItem.total,
+      cost,
+      isPaidOff,
+      // 並び替え用：マスターにあればその順序、なければ最後(Infinity)
+      sortOrder: currentProduct !== undefined ? currentProduct.sortOrder : Infinity,
+      isDeleted: !currentProduct
+    };
+  });
 
-        paidOff.value = paidOff.value || isPaidOff;
-
-        return {
-          id: p.id,
-          title: p.title,
-          quantity: quantity, // これで「頒布数」が表示される
-          total: p.total_sales_amount || 0,
-          cost: p.cost || 0,
-          isPaidOff: isPaidOff,
-        };
-      })
-      // 3. 頒布数が 0 は除く
-      .filter((item) => item.quantity)
-  );
+  // 3. ソート：sortOrder順に並べ、削除済み(Infinity)は最後に
+  return summary.sort((a, b) => a.sortOrder - b.sortOrder);
 });
 
 // 総合計
@@ -208,6 +221,7 @@ const deleteSales = async () => {
               />
             </td>
             <th scope="row">
+              <i-octicon-x-24 v-if="item.isDeleted" class="deleted" aria-label="削除済み" />
               <template v-if="item.title">{{ item.title }}</template>
               <span v-else class="untitled">名称未設定</span>
             </th>
