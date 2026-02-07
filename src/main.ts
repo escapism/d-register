@@ -39,8 +39,8 @@ router.afterEach((to, from) => {
   if (gtm) {
     gtm.trackEvent({
       event: "content-view",
-      page_referrer: getPageLocation(from.href),
-      page_location: getPageLocation(to.href)
+      page_referrer: from.matched.length ? getPageLocation(from) : document.referrer,
+      page_location: getPageLocation(to)
     })
   }
 });

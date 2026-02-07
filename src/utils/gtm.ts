@@ -14,7 +14,6 @@ export function gtmTrackError(event: string): void {
   }
 }
 
-export function getPageLocation(href : string) {
-  if (href === undefined) return ""
-  return location.origin + location.pathname + href
+export function getPageLocation(router: object) {
+  return location.origin + location.pathname.replace(/\/$/, "") + router.fullPath
 }
