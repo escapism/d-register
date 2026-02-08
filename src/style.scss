@@ -415,6 +415,11 @@ main {
   opacity: 0;
 }
 
+.anonymous,
+.untitled {
+  color: var(--grey);
+}
+
 // Header
 .site-header {
   display: grid;
@@ -1369,10 +1374,6 @@ main {
   position: relative;
   top: 0.12em;
   margin-right: 0.25em;
-}
-
-.untitled {
-  color: var(--grey);
 }
 
 .sales-table-note {

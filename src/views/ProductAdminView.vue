@@ -237,7 +237,7 @@ const addNewProduct = () => {
     total_sales_amount: 0,
     sortOrder: 0,
     hidden: false,
-    showMeta: false, // 追加情報エリアは閉じた状態で作成
+    showMeta: true, // 追加情報エリアは開いた状態で作成
   });
 
   gtmTrackEvent("add_product")

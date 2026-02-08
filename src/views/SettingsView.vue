@@ -186,7 +186,7 @@ const importAllData = async (e: Event) => {
 
     gtmTrackEvent("import_app_data");
     await openDialog("インポートが完了しました。");
-    // window.location.reload(); // 整合性を保つためリロード
+    resetOptions()
     await loadOptions();
   } catch (err) {
     console.error(err);

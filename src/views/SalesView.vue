@@ -11,7 +11,7 @@ const router = useRoute()
 const openDialog = inject("globalDialog");
 const products = ref<Product[]>([]);
 const sales = ref<any[]>([]);
-const circleName = ref("data");
+const circleName = ref("");
 const paidOff = ref(false);
 
 const isExporting = ref(false);

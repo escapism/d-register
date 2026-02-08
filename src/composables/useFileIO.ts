@@ -9,7 +9,7 @@ import {sanitizeImportedProduct} from "@/utils/productHelper"
 export async function exportToJson(data, fileName = "") {
   const circleName = await db.options.get("circleName");
 
-  fileName = `${fileName}${circleName.value ? "_" + circleName.value : ""}_${getDateString()}.json`;
+  fileName = `${fileName}${circleName?.value ? "_" + circleName.value : ""}_${getDateString()}.json`;
 
   const blob = new Blob([JSON.stringify(data, null, 2)], {
     type: "application/json",
@@ -25,7 +25,7 @@ export async function exportToJson(data, fileName = "") {
 /**
  * ファイル選択ダイアログを開き、JSONをパースして返す
  */
-export async function importFromJson(file, property="") {
+export async function importFromJson(file : File, property="") {
   const text = await file.text()
 
   try {
@@ -38,7 +38,11 @@ export async function importFromJson(file, property="") {
       if (property === "products") {
         return sanitizedProducts
       }
-      data.products = sanitizedProducts
+      if (Array.isArray(data)) {
+        return {
+          products: sanitizedProducts
+        }
+      }
     }
 
     return data

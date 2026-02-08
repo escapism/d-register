@@ -1,14 +1,21 @@
 <script setup lang="ts">
-import { ref, useTemplateRef, onMounted } from "vue";
+import { ref, computed, useTemplateRef, onMounted } from "vue";
+import { useObservable } from "@vueuse/rxjs";
+import { liveQuery } from "dexie";
+import { db } from "@/db";
 import { gtmTrackEvent } from "@/utils/gtm.ts"
 
-defineProps({
-  circleName: String,
-});
+// サークル名取得
+const circleName = useObservable(
+  liveQuery(async () => {
+    const opt = await db.options.get("circleName")
+    return opt ? opt.value : undefined
+  })
+);
 
 const globalNav = useTemplateRef("globalNav");
 const activeMenu = ref(false);
-const appVersion = ref(APP_VERSION)
+const appVersion = APP_VERSION
 
 let touchStartX = 0;
 
@@ -63,10 +70,16 @@ const handleHeaderBtn = (event : string) => {
   }
   closeMenu()
 }
+const showCirclName = computed(() => {
+  if (circleName.value === undefined) {
+    return "名称未設定サークル"
+  }
+  return circleName.value
+})
 </script>
 <template>
   <header class="site-header">
-    <h1 v-if="circleName" class="circle-name">{{ circleName }}</h1>
+    <h1 class="circle-name" :class="{'anonymous' : circleName === undefined}">{{ showCirclName }}</h1>
     <button
       class="header-btn menu-btn"
       aria-label="メニューを開く"
