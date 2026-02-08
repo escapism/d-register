@@ -306,7 +306,7 @@ const deleteAllData = async () => {
           <i-octicon-upload-16 /> データインポート
           <input
             type="file"
-            accept=".json"
+            accept=".json,application/json"
             @change="importAllData"
             style="display: none"
           />

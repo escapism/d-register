@@ -326,7 +326,7 @@ const toggleSortMode = () => {
         <i-octicon-upload-16 /> インポート
         <input
           type="file"
-          accept=".json"
+          accept=".json,application/json"
           @change="importJSON"
           style="display: none"
         />
