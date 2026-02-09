@@ -13,14 +13,16 @@ const popped = inject("globalPopup");
 const loader = inject("globalLoader");
 
 const circleName = ref("");
-const showStock = ref(true);
-const showSoldoutItems = ref(true);
-const showCheckoutDialog = ref(true);
-const showCalculator = ref(true);
+const showStock = ref(1);
+const showSoldoutItems = ref(1);
+const showCheckoutDialog = ref(1);
+const showCalculator = ref(1);
 const threeColumns = ref(false);
+const showAgeValification = ref(0)
+const enableFiltering = ref(0)
+
 const isSaving = ref(false); // 保存中フラグ
 const isExporting = ref(false);
-
 const includeSales = ref(false); // 売上データを含めるかどうか
 
 let saved = false;
@@ -36,31 +38,40 @@ watch(isSaving, (val) => {
 
 const loadOptions = async () => {
   const nameOpt = await db.options.get("circleName");
-  if (nameOpt) circleName.value = nameOpt.value;
+  if (nameOpt) circleName.value = nameOpt.value
 
   const stockOpt = await db.options.get("showStock");
-  if (stockOpt) showStock.value = stockOpt.value;
+  if (stockOpt) showStock.value = stockOpt.value ? 1 : 0;
 
   const soldoutOpt = await db.options.get("showSoldoutItems");
-  if (soldoutOpt) showSoldoutItems.value = soldoutOpt.value;
+  if (soldoutOpt) showSoldoutItems.value = soldoutOpt.value ? 1 : 0;
 
   const dialogOpt = await db.options.get("showCheckoutDialog");
-  if (dialogOpt) showCheckoutDialog.value = dialogOpt.value;
+  if (dialogOpt) showCheckoutDialog.value = dialogOpt.value ? 1 : 0;
 
   const calcOpt = await db.options.get("showCalculator");
-  if (calcOpt) showCalculator.value = calcOpt.value;
+  if (calcOpt) showCalculator.value = calcOpt.value ? 1 : 0;
 
   const columnsOpt = await db.options.get("numCols");
   if (columnsOpt) threeColumns.value = columnsOpt.value === 3;
+
+  const ageOpt = await db.options.get("showAgeValification");
+  if (ageOpt) showAgeValification.value = ageOpt.value ? 1 : 0;
+
+  const filterOpt = await db.options.get("enableFiltering")
+  if (filterOpt) enableFiltering.value = filterOpt.value ? 1 : 0
 };
 
 const resetOptions = () => {
   circleName.value = "";
-  showStock.value = true;
-  showSoldoutItems.value = true;
-  showCheckoutDialog.value = true;
-  showCalculator.value = true;
+  showStock.value = 1;
+  showSoldoutItems.value = 1;
+  showCheckoutDialog.value = 1;
+  showCalculator.value = 1;
   threeColumns.value = false;
+  showAgeValification.value = 0;
+  enableFiltering.value = 0;
+  includeSales.value = false;
 };
 
 // 初期ロード
@@ -86,6 +97,14 @@ const saveSettings = async () => {
       value: showCalculator.value,
     });
     await db.options.put({
+      key: "showAgeValification",
+      value: showAgeValification.value,
+    });
+    await db.options.put({
+      key: "enableFiltering",
+      value: enableFiltering.value,
+    });
+    await db.options.put({
       key: "numCols",
       value: threeColumns.value ? 3 : 2,
     });
@@ -109,13 +128,15 @@ const exportAllData = async () => {
   try {
     const products = await db.products.toArray();
     const options = await db.options.toArray();
-    let dataExists = products.length || options.length;
+    const terms = await db.terms.toArray();
+    let dataExists = products.length || options.length || terms.length;
 
     // エクスポート用データオブジェクトの作成
     const exportData: any = {
       timestamp: new Date().toISOString(),
       options,
-      products: products,
+      products,
+      terms,
     };
 
     // チェックが入っている場合のみ売上データ（sales）を取得して追加
@@ -161,20 +182,26 @@ const importAllData = async (e: Event) => {
 
     await db.transaction(
       "rw",
-      [db.options, db.products, db.sales],
+      [db.options, db.products, db.terms, db.sales],
       async () => {
         await db.options.clear();
         await db.products.clear();
+        await db.terms.clear();
         await db.sales.clear();
 
-        // 1. 設定値 (options) の上書き
+        // 設定値 (options) の上書き
         if (data.options) {
           await db.options.bulkPut(data.options);
         }
 
-        // 2. 頒布物 (products) の上書き
+        // 頒布物 (products) の上書き
         if (data.products) {
           await db.products.bulkPut(data.products);
+        }
+
+        // ターム (terms) の上書き
+        if (data.terms) {
+          await db.terms.bulkPut(data.terms);
         }
 
         // 売上データがJSONに含まれている場合のみ処理
@@ -186,7 +213,7 @@ const importAllData = async (e: Event) => {
 
     gtmTrackEvent("import_app_data");
     await openDialog("インポートが完了しました。");
-    resetOptions()
+    resetOptions();
     await loadOptions();
   } catch (err) {
     console.error(err);
@@ -245,25 +272,67 @@ const deleteAllData = async () => {
         <tr>
           <th>在庫数を表示</th>
           <td>
-            <input type="checkbox" v-model="showStock" />
+            <input
+              type="checkbox"
+              v-model="showStock"
+              :true-value="1"
+              :false-value="0"
+            />
           </td>
         </tr>
         <tr>
           <th>完売品を表示</th>
           <td>
-            <input type="checkbox" v-model="showSoldoutItems" />
+            <input
+              type="checkbox"
+              v-model="showSoldoutItems"
+              :true-value="1"
+              :false-value="0"
+            />
           </td>
         </tr>
         <tr>
           <th>精算時の確認ダイアログを表示</th>
           <td>
-            <input type="checkbox" v-model="showCheckoutDialog" />
+            <input
+              type="checkbox"
+              v-model="showCheckoutDialog"
+              :true-value="1"
+              :false-value="0"
+            />
           </td>
         </tr>
         <tr>
           <th>お釣り計算機を表示</th>
           <td>
-            <input type="checkbox" v-model="showCalculator" />
+            <input
+              type="checkbox"
+              v-model="showCalculator"
+              :true-value="1"
+              :false-value="0"
+            />
+          </td>
+        </tr>
+        <tr>
+          <th>年齢確認ダイアログを表示</th>
+          <td>
+            <input
+              type="checkbox"
+              v-model="showAgeValification"
+              :true-value="1"
+              :false-value="0"
+            />
+          </td>
+        </tr>
+        <tr>
+          <th>絞り込み機能を有効化（レジ）</th>
+          <td>
+            <input
+              type="checkbox"
+              v-model="enableFiltering"
+              :true-value="1"
+              :false-value="0"
+            />
           </td>
         </tr>
         <tr>

@@ -1,17 +1,15 @@
 <script setup lang="ts">
-import { ref, onMounted, watch, inject, nextTick } from "vue";
-import { useRoute } from 'vue-router';
-import { db, type Product } from "@/db";
-import {
-  convertToBase64,
-  getResizedBlob,
-  productEqual,
-} from "@/utils/imageHelper";
-import { formatProductForSave } from "@/utils/productHelper";
+import { ref, onMounted, watch, inject, nextTick, computed } from "vue";
+import { liveQuery } from "dexie";
+import { useObservable } from "@vueuse/rxjs";
+import { useRoute } from "vue-router";
+import { db, type Product, type Term } from "@/db";
+import { convertToBase64, getResizedBlob } from "@/utils/imageHelper";
+import { formatProductForSave, productEqual } from "@/utils/productHelper";
 import { exportToJson, importFromJson } from "@/composables/useFileIO";
 import draggable from "vuedraggable";
 import { EXPORT_DELAY } from "@/const/number";
-import { gtmTrackEvent, gtmTrackError } from "@/utils/gtm.ts"
+import { gtmTrackEvent, gtmTrackError } from "@/utils/gtm.ts";
 
 const openDialog = inject("globalDialog");
 const popped = inject("globalPopup");
@@ -21,9 +19,8 @@ const metaRefs = ref<Record<number, HTMLElement | null>>({});
 const route = useRoute();
 
 // UI管理用の拡張型
-interface EditableProduct extends Omit<Product, "image"> {
+interface EditableProduct extends Product {
   tempId: number; // key固定用のID
-  image?: Blob | string;
   showMeta?: boolean;
 }
 
@@ -36,14 +33,16 @@ const setMetaRef = (el: any, id: number) => {
   }
 };
 
+const activeCategoryId = ref<number | "all">("all"); // カテゴリー選択状態
 const editableProducts = ref<EditableProduct[]>([]);
 const isSortMode = ref(false); // 並び替えモード
 const isSaving = ref(false); // 保存中フラグ
 const isImported = ref(false); // インポート経由のデータかどうか
 const isExporting = ref(false);
 
-let saved = false;
+const allCategories = ref<Term[]>([]); // カテゴリー一覧
 
+let saved = false;
 let tempId: number = 0;
 
 watch(isSaving, (val) => {
@@ -57,17 +56,41 @@ watch(isSaving, (val) => {
 
 // 初期表示
 onMounted(async () => {
-  const all = await db.products.orderBy("sortOrder").toArray();
-  editableProducts.value = all.map((p) => ({
+  // 商品とカテゴリーを並行してロード
+  const [allProducts, allTerms] = await Promise.all([
+    db.products.orderBy("sortOrder").toArray(),
+    db.terms.where("taxonomy").equals("category").sortBy("sortOrder"),
+  ]);
+  allCategories.value = allTerms;
+
+  editableProducts.value = allProducts.map((p) => ({
     ...p,
-    tempId: p.id,
+    infinite_stock: p.infinite_stock ? 1 : 0,
+    hidden: p.hidden ? 1 : 0,
+    r18: p.r18 ? 1 : 0,
+    tempId: p.id!,
+    terms: p.terms || { category: [] },
     showMeta: false, // 初期状態は閉じる
   }));
 
-  if (all.length) {
-    const ids = all.map((p) => p.id);
+  if (allProducts.length) {
+    const ids = allProducts.map((p) => p.id);
     tempId = Math.max(...ids);
   }
+});
+
+// カテゴリー絞り込み
+const filteredProducts = computed(() => {
+  const products = editableProducts.value || [];
+
+  if (activeCategoryId.value === "all") {
+    return products;
+  }
+
+  // 選択されたカテゴリーIDを持つ商品のみ抽出
+  return editableProducts.value.filter((p) =>
+    p.terms?.category?.includes(activeCategoryId.value as number),
+  );
 });
 
 // 画像選択
@@ -120,7 +143,6 @@ const saveAll = async () => {
         editableProducts.value.forEach(async (item, index) => {
           const oldData = savedProducts.find((p) => p.id === item.id);
           item.sortOrder = index;
-
           const isDataChanged = !productEqual(oldData, item);
 
           if (!isDataChanged) return;
@@ -140,7 +162,7 @@ const saveAll = async () => {
     gtmTrackEvent("save_products");
   } catch (error) {
     console.error(error);
-    gtmTrackError("save_products")
+    gtmTrackError("save_products");
     await openDialog("保存に失敗しました。再読込してください。");
   } finally {
     setTimeout(() => {
@@ -159,7 +181,7 @@ const exportJSON = async () => {
     if (!products.length) {
       await openDialog("データがありません");
       isExporting.value = false;
-      return
+      return;
     }
 
     await exportToJson(products, `products_backup`);
@@ -169,7 +191,7 @@ const exportJSON = async () => {
     gtmTrackEvent("export_products");
   } catch (err) {
     console.error(err);
-    gtmTrackError("export_products")
+    gtmTrackError("export_products");
     await openDialog("エクスポートに失敗しました。");
     isExporting.value = false;
   }
@@ -181,13 +203,18 @@ const importJSON = async (e: Event) => {
   if (!file) return;
 
   try {
-    const data = await importFromJson(file, "products");
-    const imported = data.map((item, index) => {
-      return {
-        ...item,
+    const importedRaw = await importFromJson(file, "products");
+
+    // インポートされた各商品に対してクリーンアップを実行
+    const imported = importedRaw.map((p: Product, index) => {
+      const productWithTerms = {
+        ...p,
+        terms: p.terms || { category: [] },
         tempId: index,
         showMeta: false,
       };
+
+      return cleanupProductTerms(productWithTerms);
     });
 
     imported.sort((a, b) => a.sortOrder - b.sortOrder);
@@ -198,11 +225,25 @@ const importJSON = async (e: Event) => {
     gtmTrackEvent("import_products");
     await openDialog("インポートしました。保存ボタンを押すと確定します。");
   } catch (err) {
-    gtmTrackError("import_products")
+    gtmTrackError("import_products");
     await openDialog("JSONの読み込みに失敗しました。");
   } finally {
     (e.target as HTMLInputElement).value = "";
   }
+};
+
+// 商品データの terms.category から、DBに存在しないタームIDを除去する
+const cleanupProductTerms = (product: Product) => {
+  if (!product.terms?.category) return product;
+
+  // 現在DBから読み込んでいる allCategories に含まれるIDのみ残す
+  const validIds = new Set(allCategories.value.map((c) => c.id));
+
+  product.terms.category = product.terms.category.filter((id) =>
+    validIds.has(id),
+  );
+
+  return product;
 };
 
 // 指定したインデックスの要素を移動させる
@@ -216,7 +257,7 @@ const moveItem = (index: number, direction: "up" | "down") => {
   // 要素の入れ替え
   const item = editableProducts.value.splice(index, 1)[0];
   editableProducts.value.splice(newIndex, 0, item);
-  gtmTrackEvent("move_item")
+  gtmTrackEvent("move_item");
 };
 
 // 入力欄の全選択
@@ -231,16 +272,18 @@ const addNewProduct = () => {
     title: "",
     price: 500,
     stock: 10,
-    infinite_stock: false,
+    infinite_stock: 0,
     pubdate: "",
     cost: null,
     total_sales_amount: 0,
     sortOrder: 0,
-    hidden: false,
+    hidden: 0,
+    r18: 0,
+    terms: { category: [] },
     showMeta: true, // 追加情報エリアは開いた状態で作成
   });
 
-  gtmTrackEvent("add_product")
+  gtmTrackEvent("add_product");
 
   nextTick(() => {
     window.scrollTo(0, 0);
@@ -250,7 +293,7 @@ const addNewProduct = () => {
 // 商品削除
 const removeProduct = (index: number) => {
   editableProducts.value.splice(index, 1);
-  gtmTrackEvent("remove_product")
+  gtmTrackEvent("remove_product");
 };
 
 // 表示切り替え関数
@@ -281,7 +324,7 @@ const toggleMeta = (id: number, index: number) => {
     });
   }
   item.showMeta = !item.showMeta;
-  gtmTrackEvent("toggle_meta")
+  gtmTrackEvent("toggle_meta");
 };
 
 // ソート用関数
@@ -303,20 +346,50 @@ const sortProducts = () => {
     return idB - idA; // IDが新しい順
   });
 
-  gtmTrackEvent("sort_products")
+  gtmTrackEvent("sort_products");
 };
 
 // 並び替えモードの切り替え
 const toggleSortMode = () => {
   isSortMode.value = !isSortMode.value;
-  gtmTrackEvent("toggle_sort_mode")
+  gtmTrackEvent("toggle_sort_mode");
+};
+
+// カテゴリー変更
+const updateCategorySelection = (productIndex: number, event: Event) => {
+  const select = event.target as HTMLSelectElement;
+  // 選択されている option の value (ID) を数値配列として抽出
+  const selectedIds = Array.from(select.selectedOptions).map((option) =>
+    Number(option.value),
+  );
+  editableProducts.value[productIndex].terms.category = selectedIds;
+};
+
+// カテゴリー文字列
+const categoriesStr = (index: number) => {
+  const categories = editableProducts.value[index]?.terms.category;
+  if (!categories || !categories.length) return "未選択";
+
+  return categories
+    .map((id) => {
+      return allCategories.value.find((cat) => cat.id == id)?.name;
+    })
+    .filter((n) => n)
+    .join(", ");
 };
 </script>
 
 <template>
   <div class="container page-container">
-    <h1 class="page-title"><i-octicon-file-added-24 /> {{ route.meta.title }}</h1>
-
+    <h1 class="page-title">
+      <i-octicon-file-added-24 /> {{ route.meta.title }}
+    </h1>
+    <div class="pagination">
+      <router-link to="/admin/category" class="next">
+        カテゴリー管理
+        <i-octicon-arrow-right-16 />
+      </router-link>
+    </div>
     <div class="buttons">
       <button @click="exportJSON" class="btn btn-dl" :disabled="isExporting">
         <i-octicon-download-16 /> エクスポート
@@ -331,6 +404,17 @@ const toggleSortMode = () => {
           style="display: none"
         />
       </label>
+    </div>
+    <div class="admin-filter" v-if="allCategories.length">
+      <div class="filter-group">
+        <i-octicon-file-directory-24 aria-label="カテゴリー" />
+        <select v-model="activeCategoryId">
+          <option value="all">すべて</option>
+          <option v-for="cat in allCategories" :key="cat.id" :value="cat.id">
+            {{ cat.name }}
+          </option>
+        </select>
+      </div>
     </div>
     <div v-if="isImported" class="warning">
       <strong
@@ -364,7 +448,7 @@ const toggleSortMode = () => {
     </button>
 
     <draggable
-      v-model="editableProducts"
+      v-model="filteredProducts"
       item-key="tempId"
       class="edit-item-list"
       :class="{ 'is-sort-mode': isSortMode }"
@@ -453,7 +537,12 @@ const toggleSortMode = () => {
                       :disabled="isSortMode"
                     />
                     <label class="checkbox-label"
-                      ><input type="checkbox" v-model="item.infinite_stock" />
+                      ><input
+                        type="checkbox"
+                        v-model="item.infinite_stock"
+                        :true-value="1"
+                        :false-value="0"
+                      />
                       無制限</label
                     >
                   </div>
@@ -467,7 +556,13 @@ const toggleSortMode = () => {
                   v-if="item.hidden"
                   aria-label="非表示"
                 />
-                <input type="checkbox" v-model="item.hidden" @change="gtmTrackEvent('toggle_visibility')" />
+                <input
+                  type="checkbox"
+                  v-model="item.hidden"
+                  :true-value="1"
+                  :false-value="0"
+                  @change="gtmTrackEvent('toggle_visibility')"
+                />
               </label>
               <div class="edit-item__order">
                 <button
@@ -542,6 +637,53 @@ const toggleSortMode = () => {
                       </div>
                     </dd>
                   </div>
+                  <div class="edit-item-meta-data__item">
+                    <dt>R18</dt>
+                    <dd>
+                      <input
+                        v-model.number="item.r18"
+                        :true-value="1"
+                        :false-value="0"
+                        type="checkbox"
+                        :disabled="isSortMode"
+                      />
+                    </dd>
+                  </div>
+                  <div
+                    class="edit-item-meta-data__item"
+                    v-if="allCategories.length"
+                  >
+                    <dt>カテゴリー</dt>
+                    <dd>
+                      <div class="category-selector">
+                        <label>
+                          <select
+                            multiple
+                            size="1"
+                            v-model="item.terms.category"
+                            @change="updateCategorySelection(index, $event)"
+                            :disabled="isSortMode"
+                          >
+                            <option
+                              v-for="cat in allCategories"
+                              :key="cat.id"
+                              :value="cat.id"
+                            >
+                              {{ cat.name }}
+                            </option>
+                          </select>
+                        </label>
+                        <input
+                          type="text"
+                          :class="{
+                            'no-category': !item.terms.category.length,
+                          }"
+                          :value="categoriesStr(index)"
+                          readonly
+                        />
+                      </div>
+                    </dd>
+                  </div>
                 </dl>
               </div>
             </div>
@@ -557,3 +699,4 @@ const toggleSortMode = () => {
     </button>
   </div>
 </template>
+<style scoped></style>

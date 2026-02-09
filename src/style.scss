@@ -1,5 +1,3 @@
-@use "sass:math";
-
 $miniTablet: 480px;
 $midTablet: 640px;
 $tablet: 768px;
@@ -16,8 +14,9 @@ $controll-height: 3.5rem;
   --red: #ff4242;
   --green: #1c9d3c;
   --blue: #3f68f1;
-  --color: #fefefe;
+  --orange: orange;
   --grey: #999;
+  --color: #fefefe;
   --bg-color: #131416;
   --bg-color-rgb: 19, 20, 22;
   --header-bg: #2c2d2f;
@@ -26,6 +25,7 @@ $controll-height: 3.5rem;
   --link-color: #9e9eff;
   --menu-width: 52vw;
   --site-padding: 0.75rem;
+  --site-padding-bottom: 1.5rem;
   font:
     16px/1.5 "M PLUS 1",
     sans-serif;
@@ -173,18 +173,10 @@ button {
 select,
 input:where([type="text"], [type="url"], [type="number"], [type="date"]) {
   max-width: 100%;
-  height: 1.75em;
   box-shadow: 0 0 0 1px var(--border-color) inset;
-  padding: 0.125em 0.5em;
+  padding: 0.25em 0.5em;
   border-radius: 0.25em;
   background: #3c3d3e;
-}
-
-select {
-  min-width: 4em;
-  border-radius: 3em;
-  text-align: center;
-  text-align-last: center;
 }
 
 input[type="checkbox"] {
@@ -220,6 +212,7 @@ input[type="checkbox"] {
 }
 
 input[type="date"] {
+  padding-inline: 0.25em;
   font-family: monospace;
 }
 
@@ -281,6 +274,11 @@ main {
     background: var(--border-color);
     color: var(--grey);
   }
+  @media (pointer: fine) {
+    &:focus {
+      outline: 2px solid var(--orange);
+    }
+  }
 }
 
 .buttons {
@@ -311,8 +309,27 @@ main {
   margin: 0 0 1em;
   padding: 0;
   font-size: 1.25rem;
+  &:has(+ .pagination) {
+    margin-bottom: 0.125em;
+  }
   svg {
     width: 1.25em;
+  }
+}
+
+.sub-menu {
+  display: flex;
+  list-style: none;
+  flex-wrap: wrap;
+  justify-content: end;
+  gap: 0.5em 1em;
+  margin: 1em 0 0;
+  padding: 0;
+  font-size: 0.75em;
+  a {
+    display: flex;
+    align-items: center;
+    text-decoration: none;
   }
 }
 
@@ -382,7 +399,6 @@ main {
 .dialog-content {
   grid-area: content;
   height: 100%;
-  overflow: auto;
 }
 
 .dialog-actions {
@@ -395,7 +411,7 @@ main {
     font-size: 0.9375em;
     @media (pointer: fine) {
       &:focus {
-        outline: 1px solid orange;
+        outline: 1px solid var(--orange);
         border-radius: 0.25em;
       }
     }
@@ -418,6 +434,21 @@ main {
 .anonymous,
 .untitled {
   color: var(--grey);
+}
+
+.pagination {
+  display: flex;
+  margin-bottom: 1.25rem;
+  font-size: 0.75em;
+  a {
+    display: flex;
+    align-items: center;
+    width: fit-content;
+    text-decoration: none;
+  }
+  .next {
+    margin-left: auto;
+  }
 }
 
 // Header
@@ -615,7 +646,10 @@ main {
 
 .page-container {
   padding: var(--site-padding);
-  padding-bottom: calc(var(--site-padding) + env(safe-area-inset-bottom));
+  padding-bottom: var(--site-padding-bottom);
+  padding-bottom: calc(
+    var(--site-padding-bottom) + env(safe-area-inset-bottom)
+  );
 }
 
 // Register
@@ -625,6 +659,24 @@ main {
   }
   .register-container & {
     padding: var(--site-padding);
+  }
+}
+
+.register-filter {
+  margin-bottom: 1px;
+  padding: .25em;
+}
+
+.admin-filter {
+  margin-top: 1em;
+}
+
+.filter-group {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  align-items: center;
+  svg {
+    margin-right: 0.25em;
   }
 }
 
@@ -779,6 +831,14 @@ main {
   font-size: 1.25rem;
   letter-spacing: 0.5em;
   text-align: center;
+}
+
+.r18 {
+  position: absolute;
+  top: 2.25em;
+  left: 0.5em;
+  z-index: 5;
+  width: 2em;
 }
 
 .sub {
@@ -936,6 +996,20 @@ main {
   }
 }
 
+.age-valification-dialog {
+  p {
+    text-align: center;
+  }
+}
+
+.birthday-check {
+  margin: 1.25rem 0;
+  color: var(--red);
+  font-weight: 700;
+  font-size: 1.125em;
+  text-align: center;
+}
+
 /** admin */
 .edit-item-list {
   display: flex;
@@ -1003,7 +1077,7 @@ main {
       "image controls"
       "meta meta";
     grid-template-columns: 9em 1fr;
-    grid-template-rows: repeat(4, auto) 1fr;
+    grid-template-rows: repeat(3, auto) 1fr auto;
     gap: 0.5em 1em;
     padding: 0.75em 0;
     .is-sort-mode & {
@@ -1068,6 +1142,7 @@ main {
     grid-template-areas: "order visible remove";
     grid-template-columns: auto auto 1fr;
     align-items: center;
+    align-self: end;
     gap: 0.75em;
   }
   &__visibility {
@@ -1228,7 +1303,6 @@ main {
 
 .edit-item-meta {
   grid-area: meta;
-  margin-top: 0.25em;
   &__open {
     display: flex;
     align-items: center;
@@ -1283,6 +1357,9 @@ main {
   dd {
     overflow: hidden;
   }
+  select {
+    width: 100%;
+  }
 }
 
 .input-date {
@@ -1296,6 +1373,30 @@ main {
     input {
       width: 100%;
     }
+  }
+}
+
+.category-selector {
+  position: relative;
+  label {
+    position: absolute;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    left: 0;
+    cursor: pointer;
+  }
+  select {
+    opacity: 0;
+  }
+  input {
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    overflow: hidden;
+    pointer-events: none;
+  }
+  .no-category {
+    color: var(--grey);
   }
 }
 
@@ -1315,6 +1416,57 @@ main {
     gap: 0.25em;
     color: var(--grey);
     font-size: 0.9375em;
+  }
+}
+
+/** admin/category */
+.add-category {
+  display: grid;
+  grid-template-areas: "h h" "input btn";
+  grid-template-columns: 1fr auto;
+  align-items: center;
+  gap: 0.5em;
+  margin: 0 0 2em;
+  h3 {
+    grid-area: h;
+  }
+  input {
+    grid-area: input;
+    width: 100%;
+  }
+  button {
+    grid-area: btn;
+  }
+}
+
+.category-list {
+  display: flex;
+  list-style: none;
+  flex-direction: column;
+  gap: 0.5em;
+  margin: 0;
+  padding: 0;
+  &__item {
+    display: grid;
+    grid-template-areas: "handle input remove";
+    grid-template-columns: auto 1fr auto;
+    align-items: center;
+    .drag-handle {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      height: 100%;
+      width: 1.5em;
+      margin-right: 0.25em;
+      border-radius: .25em;
+      background: rgba(#fff, 0.1);
+    }
+    input {
+      width: 100%;
+    }
+  }
+  &__name {
+    margin-right: 0.5em;
   }
 }
 
@@ -1458,6 +1610,7 @@ main {
     display: grid;
     grid-column: 1/-1;
     grid-template-columns: 1fr auto;
+    align-items: center;
     gap: 0 1rem;
     padding: 0.5rem 0;
     border-bottom: 1px solid var(--border-color);
@@ -1474,6 +1627,7 @@ main {
   }
   input:where([type="text"], [type="url"], [type="number"]) {
     width: 100%;
+    padding-block: 0.125em;
   }
 }
 
@@ -1494,6 +1648,12 @@ main {
 }
 
 /** About */
+.about-container {
+  strong {
+    color: var(--red);
+  }
+}
+
 .important-notice-box {
   position: relative;
   border-radius: 0.25rem;
