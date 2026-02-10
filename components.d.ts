@@ -11,7 +11,7 @@ export {}
 /* prettier-ignore */
 declare module 'vue' {
   export interface GlobalComponents {
-    AgeVarificationDialog: typeof import('./src/components/AgeVarificationDialog.vue')['default']
+    AgeVerificationDialog: typeof import('./src/components/AgeVerificationDialog.vue')['default']
     CheckoutDialog: typeof import('./src/components/CheckoutDialog.vue')['default']
     CustomDialog: typeof import('./src/components/CustomDialog.vue')['default']
     Header: typeof import('./src/components/Header.vue')['default']
@@ -24,6 +24,7 @@ declare module 'vue' {
     IOcticonCalendar16: typeof import('~icons/octicon/calendar16')['default']
     IOcticonCheck16: typeof import('~icons/octicon/check16')['default']
     IOcticonChevronDown16: typeof import('~icons/octicon/chevron-down16')['default']
+    IOcticonChevronDown24: typeof import('~icons/octicon/chevron-down24')['default']
     IOcticonChevronUp16: typeof import('~icons/octicon/chevron-up16')['default']
     IOcticonCode24: typeof import('~icons/octicon/code24')['default']
     IOcticonDash16: typeof import('~icons/octicon/dash16')['default']
@@ -46,6 +47,7 @@ declare module 'vue' {
     IOcticonStarFill16: typeof import('~icons/octicon/star-fill16')['default']
     IOcticonSync24: typeof import('~icons/octicon/sync24')['default']
     IOcticonTrash24: typeof import('~icons/octicon/trash24')['default']
+    IOcticonTriangleRight24: typeof import('~icons/octicon/triangle-right24')['default']
     IOcticonUpload16: typeof import('~icons/octicon/upload16')['default']
     IOcticonX24: typeof import('~icons/octicon/x24')['default']
     IOcticonXCircleFill16: typeof import('~icons/octicon/x-circle-fill16')['default']

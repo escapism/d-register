@@ -58,7 +58,7 @@ defineExpose({ show });
   <Teleport to="body">
     <Transition name="fade">
       <div v-show="isOpen" class="dialog-overlay" @click.self="handleCancel">
-        <div role="dialog" class="confirm-dialog age-valification-dialog">
+        <div role="dialog" class="confirm-dialog age-verification-dialog">
           <p>
             ⚠️18禁アイテムが含まれています。<br />年齢確認を行ってください。
           </p>

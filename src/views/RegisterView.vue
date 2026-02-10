@@ -9,12 +9,12 @@ import ProductRegisterItem from "@/components/ProductRegisterItem.vue";
 import ImportantNotice from "@/components/ImportantNotice.vue"
 import ProductFilter from "@/components/ProductFilter.vue";
 import CheckoutDialog from "@/components/CheckoutDialog.vue";
-import AgeValificationDialog from "@/components/AgeVarificationDialog.vue";
+import AgeVerificationDialog from "@/components/AgeVerificationDialog.vue";
 import { SETTING_SCHEMA } from "@/const/setting";
 
 const openDialog = inject("globalDialog");
 const popped = inject("globalPopup");
-const varificationDialog = useTemplateRef("varificationDialog");
+const verificationDialog = useTemplateRef("verificationDialog");
 
 // DBから商品をリアルタイム取得
 const products = useObservable(
@@ -153,13 +153,13 @@ const openCheckoutDialog = async () => {
     .filter((item) => item.count > 0);
 
   // 年齢確認ロジック
-  if (settings.showAgeValification && orderSummary.value.some((i) => i.r18)) {
-    const validation = await varificationDialog.value.show();
-    if (validation === -1) {
+  if (settings.showAgeVerification && orderSummary.value.some((i) => i.r18)) {
+    const verified = await verificationDialog.value.show();
+    if (verified === -1) {
       clearTotal();
       gtmTrackEvent("clear_r18");
       return;
-    } else if (validation === 0) {
+    } else if (verified === 0) {
       gtmTrackEvent("cancel_r18");
       return;
     }
@@ -269,5 +269,5 @@ const executeCheckout = async () => {
     @clear="handleClear"
     @cancel="gtmTrackEvent('cancel_checkout')"
   />
-  <AgeValificationDialog v-if="settings.showAgeValification" ref="varificationDialog" :showCheckoutDialog="settings.showCheckoutDialog" />
+  <AgeVerificationDialog v-if="settings.showAgeVerification" ref="verificationDialog" :showCheckoutDialog="settings.showCheckoutDialog" />
 </template>

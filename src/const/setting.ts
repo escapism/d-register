@@ -6,7 +6,7 @@ export const SETTING_SCHEMA = [
   { key: "showSoldoutItems", label: "完売品を表示", type: "toggle", default: 1 },
   { key: "showCheckoutDialog", label: "精算時の確認ダイアログを表示", type: "toggle", default: 1 },
   { key: "showCalculator", label: "お釣り計算機を表示", type: "toggle", default: 1 },
-  { key: "showAgeValification", label: "年齢確認ダイアログを表示", type: "toggle", default: 0 },
+  { key: "showAgeVerification", label: "年齢確認ダイアログを表示", type: "toggle", default: 0 },
   { key: "enableFiltering", label: "レジでの絞り込み機能", type: "toggle", default: 0 },
   { key: "numCols", label: "3列モード", type: "columns", default: 2 },
 ] as const;
