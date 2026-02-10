@@ -3,8 +3,9 @@ import { ref, onMounted, watch, inject } from "vue";
 import { useRoute } from "vue-router";
 import { db } from "@/db";
 import { exportToJson, importFromJson } from "@/composables/useFileIO";
-import { EXPORT_DELAY } from "@/const/number";
+import { EXPORT_DELAY, SAVING_DELAY } from "@/const/number";
 import { gtmTrackEvent, gtmTrackError } from "@/utils/gtm.ts";
+import { SETTING_SCHEMA } from "@/const/setting";
 
 const router = useRoute();
 
@@ -12,18 +13,20 @@ const openDialog = inject("globalDialog");
 const popped = inject("globalPopup");
 const loader = inject("globalLoader");
 
-const circleName = ref("");
-const showStock = ref(true);
-const showSoldoutItems = ref(true);
-const showCheckoutDialog = ref(true);
-const showCalculator = ref(true);
-const threeColumns = ref(false);
+const settings = ref<Record<string, any>>({});
 const isSaving = ref(false); // 保存中フラグ
 const isExporting = ref(false);
-
 const includeSales = ref(false); // 売上データを含めるかどうか
 
 let saved = false;
+
+// 初期値のセット
+const resetOptions = () => {
+  SETTING_SCHEMA.forEach((s) => {
+    settings.value[s.key] = s.default;
+  });
+}
+resetOptions()
 
 watch(isSaving, (val) => {
   loader(val);
@@ -35,32 +38,18 @@ watch(isSaving, (val) => {
 });
 
 const loadOptions = async () => {
-  const nameOpt = await db.options.get("circleName");
-  if (nameOpt) circleName.value = nameOpt.value;
+  const allOpts = await db.options.toArray();
+  const optMap = Object.fromEntries(allOpts.map((o) => [o.key, o.value]));
 
-  const stockOpt = await db.options.get("showStock");
-  if (stockOpt) showStock.value = stockOpt.value;
-
-  const soldoutOpt = await db.options.get("showSoldoutItems");
-  if (soldoutOpt) showSoldoutItems.value = soldoutOpt.value;
-
-  const dialogOpt = await db.options.get("showCheckoutDialog");
-  if (dialogOpt) showCheckoutDialog.value = dialogOpt.value;
-
-  const calcOpt = await db.options.get("showCalculator");
-  if (calcOpt) showCalculator.value = calcOpt.value;
-
-  const columnsOpt = await db.options.get("numCols");
-  if (columnsOpt) threeColumns.value = columnsOpt.value === 3;
-};
-
-const resetOptions = () => {
-  circleName.value = "";
-  showStock.value = true;
-  showSoldoutItems.value = true;
-  showCheckoutDialog.value = true;
-  showCalculator.value = true;
-  threeColumns.value = false;
+  SETTING_SCHEMA.forEach((s) => {
+    if (optMap[s.key] !== undefined) {
+      if (s.type === "toggle") {
+        settings.value[s.key] = optMap[s.key] ? 1 : 0;
+      } else {
+        settings.value[s.key] = optMap[s.key];
+      }
+    }
+  });
 };
 
 // 初期ロード
@@ -71,25 +60,12 @@ const saveSettings = async () => {
   if (isSaving.value) return;
   isSaving.value = true;
   try {
-    await db.options.put({ key: "circleName", value: circleName.value });
-    await db.options.put({ key: "showStock", value: showStock.value });
-    await db.options.put({
-      key: "showSoldoutItems",
-      value: showSoldoutItems.value,
-    });
-    await db.options.put({
-      key: "showCheckoutDialog",
-      value: showCheckoutDialog.value,
-    });
-    await db.options.put({
-      key: "showCalculator",
-      value: showCalculator.value,
-    });
-    await db.options.put({
-      key: "numCols",
-      value: threeColumns.value ? 3 : 2,
-    });
+    const dataToPut = SETTING_SCHEMA.map((s) => ({
+      key: s.key,
+      value: settings.value[s.key],
+    }));
 
+    await db.options.bulkPut(dataToPut);
     saved = true;
     gtmTrackEvent("save_settings");
   } catch (e) {
@@ -98,7 +74,7 @@ const saveSettings = async () => {
   } finally {
     setTimeout(() => {
       isSaving.value = false;
-    }, 500);
+    }, SAVING_DELAY);
   }
 };
 
@@ -109,13 +85,15 @@ const exportAllData = async () => {
   try {
     const products = await db.products.toArray();
     const options = await db.options.toArray();
-    let dataExists = products.length || options.length;
+    const terms = await db.terms.toArray();
+    let dataExists = products.length || options.length || terms.length;
 
     // エクスポート用データオブジェクトの作成
     const exportData: any = {
       timestamp: new Date().toISOString(),
       options,
-      products: products,
+      products,
+      terms,
     };
 
     // チェックが入っている場合のみ売上データ（sales）を取得して追加
@@ -161,20 +139,26 @@ const importAllData = async (e: Event) => {
 
     await db.transaction(
       "rw",
-      [db.options, db.products, db.sales],
+      [db.options, db.products, db.terms, db.sales],
       async () => {
         await db.options.clear();
         await db.products.clear();
+        await db.terms.clear();
         await db.sales.clear();
 
-        // 1. 設定値 (options) の上書き
+        // 設定値 (options) の上書き
         if (data.options) {
           await db.options.bulkPut(data.options);
         }
 
-        // 2. 頒布物 (products) の上書き
+        // 頒布物 (products) の上書き
         if (data.products) {
           await db.products.bulkPut(data.products);
+        }
+
+        // ターム (terms) の上書き
+        if (data.terms) {
+          await db.terms.bulkPut(data.terms);
         }
 
         // 売上データがJSONに含まれている場合のみ処理
@@ -186,7 +170,7 @@ const importAllData = async (e: Event) => {
 
     gtmTrackEvent("import_app_data");
     await openDialog("インポートが完了しました。");
-    resetOptions()
+    resetOptions();
     await loadOptions();
   } catch (err) {
     console.error(err);
@@ -229,47 +213,37 @@ const deleteAllData = async () => {
 <template>
   <div class="container page-container">
     <h1 class="page-title"><i-octicon-gear-24 /> {{ router.meta.title }}</h1>
-
+    <div class="pagination">
+      <router-link to="/settings/product" class="next">
+        頒布物設定
+        <i-octicon-arrow-right-16 />
+      </router-link>
+    </div>
     <table class="setting-table">
       <tbody>
-        <tr>
-          <th>サークル名</th>
+        <tr v-for="item in SETTING_SCHEMA" :key="item.key">
+          <th>{{ item.label }}</th>
           <td>
             <input
-              v-model="circleName"
-              placeholder="サークル名を入力"
+              v-if="item.type === 'text'"
               type="text"
+              v-model="settings[item.key]"
+              placeholder="未設定"
             />
-          </td>
-        </tr>
-        <tr>
-          <th>在庫数を表示</th>
-          <td>
-            <input type="checkbox" v-model="showStock" />
-          </td>
-        </tr>
-        <tr>
-          <th>完売品を表示</th>
-          <td>
-            <input type="checkbox" v-model="showSoldoutItems" />
-          </td>
-        </tr>
-        <tr>
-          <th>精算時の確認ダイアログを表示</th>
-          <td>
-            <input type="checkbox" v-model="showCheckoutDialog" />
-          </td>
-        </tr>
-        <tr>
-          <th>お釣り計算機を表示</th>
-          <td>
-            <input type="checkbox" v-model="showCalculator" />
-          </td>
-        </tr>
-        <tr>
-          <th>3列モード</th>
-          <td>
-            <input type="checkbox" v-model="threeColumns" />
+            <input
+              v-else-if="item.type === 'toggle'"
+              type="checkbox"
+              v-model="settings[item.key]"
+              :true-value="1"
+              :false-value="0"
+            />
+            <input
+              v-else-if="item.type === 'columns'"
+              type="checkbox"
+              v-model="settings[item.key]"
+              :true-value="3"
+              :false-value="2"
+            />
           </td>
         </tr>
       </tbody>
@@ -277,7 +251,6 @@ const deleteAllData = async () => {
     <div class="button-area">
       <button @click="saveSettings" class="btn btn-save">設定を保存する</button>
     </div>
-
     <section>
       <h2>データ管理</h2>
       <p class="description">

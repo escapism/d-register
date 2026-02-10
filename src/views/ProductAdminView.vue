@@ -1,50 +1,48 @@
 <script setup lang="ts">
-import { ref, onMounted, watch, inject, nextTick } from "vue";
-import { useRoute } from 'vue-router';
-import { db, type Product } from "@/db";
-import {
-  convertToBase64,
-  getResizedBlob,
-  productEqual,
-} from "@/utils/imageHelper";
-import { formatProductForSave } from "@/utils/productHelper";
+import { ref, onMounted, watch, inject, nextTick, computed } from "vue";
+import { useRoute } from "vue-router";
+import { db, type Product, type Term } from "@/db";
+import { convertToBase64, getResizedBlob } from "@/utils/imageHelper";
+import { formatProductForSave, productEqual } from "@/utils/productHelper";
 import { exportToJson, importFromJson } from "@/composables/useFileIO";
 import draggable from "vuedraggable";
-import { EXPORT_DELAY } from "@/const/number";
-import { gtmTrackEvent, gtmTrackError } from "@/utils/gtm.ts"
+import { PRODUCT_DEFAULT } from "@/const/setting";
+import { EXPORT_DELAY, SAVING_DELAY } from "@/const/number";
+import { gtmTrackEvent, gtmTrackError } from "@/utils/gtm.ts";
+import { getDateValue } from "@/utils/dateHelper";
+import ProductAdminItem from "@/components/ProductAdminItem.vue";
+import ProductFilter from "@/components/ProductFilter.vue";
 
 const openDialog = inject("globalDialog");
 const popped = inject("globalPopup");
 const loader = inject("globalLoader");
 
-const metaRefs = ref<Record<number, HTMLElement | null>>({});
 const route = useRoute();
 
 // UI管理用の拡張型
-interface EditableProduct extends Omit<Product, "image"> {
+interface EditableProduct extends Product {
   tempId: number; // key固定用のID
-  image?: Blob | string;
   showMeta?: boolean;
 }
 
-// テンプレート参照用の関数
-const setMetaRef = (el: any, id: number) => {
-  if (el) {
-    metaRefs.value[id] = el;
-  } else {
-    delete metaRefs.value[id];
-  }
-};
-
+const activeCategoryId = ref<number | "all">("all"); // カテゴリー選択状態
 const editableProducts = ref<EditableProduct[]>([]);
 const isSortMode = ref(false); // 並び替えモード
 const isSaving = ref(false); // 保存中フラグ
 const isImported = ref(false); // インポート経由のデータかどうか
 const isExporting = ref(false);
 
-let saved = false;
+const allCategories = ref<Term[]>([]); // カテゴリー一覧
+let productDefault = { ...PRODUCT_DEFAULT };
 
+let saved = false;
 let tempId: number = 0;
+
+watch(isSortMode, (val) => {
+  if (val === true) {
+    activeCategoryId.value = "all";
+  }
+});
 
 watch(isSaving, (val) => {
   loader(val);
@@ -57,17 +55,49 @@ watch(isSaving, (val) => {
 
 // 初期表示
 onMounted(async () => {
-  const all = await db.products.orderBy("sortOrder").toArray();
-  editableProducts.value = all.map((p) => ({
+  // デフォルト設定
+  const defaultOpt = await db.options.get("productDefault");
+  if (defaultOpt && defaultOpt.value) {
+    productDefault = { ...PRODUCT_DEFAULT, ...defaultOpt.value };
+  }
+
+  // 商品とカテゴリーを並行してロード
+  const [allProducts, allTerms] = await Promise.all([
+    db.products.orderBy("sortOrder").toArray(),
+    db.terms.where("taxonomy").equals("category").sortBy("sortOrder"),
+  ]);
+  allCategories.value = allTerms;
+
+  editableProducts.value = allProducts.map((p) => ({
     ...p,
-    tempId: p.id,
-    showMeta: false, // 初期状態は閉じる
+    infinite_stock: p.infinite_stock ? 1 : 0,
+    hidden: p.hidden ? 1 : 0,
+    r18: p.r18 ? 1 : 0,
+    tempId: p.id!,
+    terms: p.terms || { category: [] },
+    showMeta: productDefault.showMeta,
   }));
 
-  if (all.length) {
-    const ids = all.map((p) => p.id);
+  if (allProducts.length) {
+    const ids = allProducts.map((p) => p.id);
     tempId = Math.max(...ids);
   }
+});
+
+// カテゴリー絞り込み
+const filteredProducts = computed({
+  get: () => {
+    if (activeCategoryId.value === "all") return editableProducts.value;
+    return editableProducts.value.filter((p) =>
+      p.terms?.category?.includes(activeCategoryId.value as number),
+    );
+  },
+  set: (newValue) => {
+    // 絞り込みなし（全件表示）の時だけ並び替えを許可する場合
+    if (activeCategoryId.value === "all") {
+      editableProducts.value = newValue;
+    }
+  },
 });
 
 // 画像選択
@@ -120,7 +150,6 @@ const saveAll = async () => {
         editableProducts.value.forEach(async (item, index) => {
           const oldData = savedProducts.find((p) => p.id === item.id);
           item.sortOrder = index;
-
           const isDataChanged = !productEqual(oldData, item);
 
           if (!isDataChanged) return;
@@ -140,12 +169,12 @@ const saveAll = async () => {
     gtmTrackEvent("save_products");
   } catch (error) {
     console.error(error);
-    gtmTrackError("save_products")
+    gtmTrackError("save_products");
     await openDialog("保存に失敗しました。再読込してください。");
   } finally {
     setTimeout(() => {
       isSaving.value = false; // 成功・失敗に関わらずフラグを下ろす
-    }, 500);
+    }, SAVING_DELAY);
   }
 };
 
@@ -159,7 +188,7 @@ const exportJSON = async () => {
     if (!products.length) {
       await openDialog("データがありません");
       isExporting.value = false;
-      return
+      return;
     }
 
     await exportToJson(products, `products_backup`);
@@ -169,7 +198,7 @@ const exportJSON = async () => {
     gtmTrackEvent("export_products");
   } catch (err) {
     console.error(err);
-    gtmTrackError("export_products")
+    gtmTrackError("export_products");
     await openDialog("エクスポートに失敗しました。");
     isExporting.value = false;
   }
@@ -181,13 +210,18 @@ const importJSON = async (e: Event) => {
   if (!file) return;
 
   try {
-    const data = await importFromJson(file, "products");
-    const imported = data.map((item, index) => {
-      return {
-        ...item,
+    const importedRaw = await importFromJson(file, "products");
+
+    // インポートされた各商品に対してクリーンアップを実行
+    const imported = importedRaw.map((p: Product, index) => {
+      const productWithTerms = {
+        ...p,
+        terms: p.terms || { category: [] },
         tempId: index,
-        showMeta: false,
+        showMeta: productDefault.showMeta,
       };
+
+      return cleanupProductTerms(productWithTerms);
     });
 
     imported.sort((a, b) => a.sortOrder - b.sortOrder);
@@ -198,11 +232,25 @@ const importJSON = async (e: Event) => {
     gtmTrackEvent("import_products");
     await openDialog("インポートしました。保存ボタンを押すと確定します。");
   } catch (err) {
-    gtmTrackError("import_products")
+    gtmTrackError("import_products");
     await openDialog("JSONの読み込みに失敗しました。");
   } finally {
     (e.target as HTMLInputElement).value = "";
   }
+};
+
+// 商品データの terms.category から、DBに存在しないタームIDを除去する
+const cleanupProductTerms = (product: Product) => {
+  if (!product.terms?.category) return product;
+
+  // 現在DBから読み込んでいる allCategories に含まれるIDのみ残す
+  const validIds = new Set(allCategories.value.map((c) => c.id));
+
+  product.terms.category = product.terms.category.filter((id) =>
+    validIds.has(id),
+  );
+
+  return product;
 };
 
 // 指定したインデックスの要素を移動させる
@@ -216,31 +264,21 @@ const moveItem = (index: number, direction: "up" | "down") => {
   // 要素の入れ替え
   const item = editableProducts.value.splice(index, 1)[0];
   editableProducts.value.splice(newIndex, 0, item);
-  gtmTrackEvent("move_item")
-};
-
-// 入力欄の全選択
-const selectAllText = (e: FocusEvent) => {
-  (e.target as HTMLInputElement).select();
+  gtmTrackEvent("move_item");
 };
 
 // 商品追加（key用のtempIdを生成）
 const addNewProduct = () => {
   editableProducts.value.unshift({
+    ...JSON.parse(JSON.stringify(productDefault)),
     tempId: ++tempId,
-    title: "",
-    price: 500,
-    stock: 10,
-    infinite_stock: false,
-    pubdate: "",
-    cost: null,
+    title: productDefault.title || "",
+    pubdate: productDefault.pubdate === "today" ? getDateValue() : null,
     total_sales_amount: 0,
     sortOrder: 0,
-    hidden: false,
-    showMeta: true, // 追加情報エリアは開いた状態で作成
   });
 
-  gtmTrackEvent("add_product")
+  gtmTrackEvent("add_product");
 
   nextTick(() => {
     window.scrollTo(0, 0);
@@ -250,38 +288,7 @@ const addNewProduct = () => {
 // 商品削除
 const removeProduct = (index: number) => {
   editableProducts.value.splice(index, 1);
-  gtmTrackEvent("remove_product")
-};
-
-// 表示切り替え関数
-const toggleMeta = (id: number, index: number) => {
-  const content = metaRefs.value[id];
-  if (!content) return;
-  const item = editableProducts.value[index];
-
-  if (item.showMeta) {
-    // 閉じるアニメーション
-    content.style.height = `${content.scrollHeight}px`;
-    requestAnimationFrame(() => {
-      content.style.height = 0;
-      content.style.marginTop = 0;
-    });
-  } else {
-    // 開くアニメーション
-    content.style.transition = "none";
-    content.style.height = "auto";
-    requestAnimationFrame(() => {
-      const height = content.scrollHeight;
-      content.style.height = 0;
-      requestAnimationFrame(() => {
-        content.style.transition = null;
-        content.style.height = `${height}px`;
-        content.style.marginTop = null;
-      });
-    });
-  }
-  item.showMeta = !item.showMeta;
-  gtmTrackEvent("toggle_meta")
+  gtmTrackEvent("remove_product");
 };
 
 // ソート用関数
@@ -303,20 +310,27 @@ const sortProducts = () => {
     return idB - idA; // IDが新しい順
   });
 
-  gtmTrackEvent("sort_products")
+  gtmTrackEvent("sort_products");
 };
 
 // 並び替えモードの切り替え
 const toggleSortMode = () => {
   isSortMode.value = !isSortMode.value;
-  gtmTrackEvent("toggle_sort_mode")
+  gtmTrackEvent("toggle_sort_mode");
 };
 </script>
 
 <template>
   <div class="container page-container">
-    <h1 class="page-title"><i-octicon-file-added-24 /> {{ route.meta.title }}</h1>
-
+    <h1 class="page-title">
+      <i-octicon-file-added-24 /> {{ route.meta.title }}
+    </h1>
+    <div class="pagination">
+      <router-link to="/admin/category" class="next">
+        カテゴリー管理
+        <i-octicon-arrow-right-16 />
+      </router-link>
+    </div>
     <div class="buttons">
       <button @click="exportJSON" class="btn btn-dl" :disabled="isExporting">
         <i-octicon-download-16 /> エクスポート
@@ -331,6 +345,14 @@ const toggleSortMode = () => {
           style="display: none"
         />
       </label>
+    </div>
+    <div class="admin-filter" v-if="allCategories.length">
+      <ProductFilter
+        v-model="activeCategoryId"
+        :categories="allCategories"
+        :disabled="isSortMode"
+        slug="admin"
+      />
     </div>
     <div v-if="isImported" class="warning">
       <strong
@@ -364,7 +386,7 @@ const toggleSortMode = () => {
     </button>
 
     <draggable
-      v-model="editableProducts"
+      v-model="filteredProducts"
       item-key="tempId"
       class="edit-item-list"
       :class="{ 'is-sort-mode': isSortMode }"
@@ -373,180 +395,19 @@ const toggleSortMode = () => {
       :animation="200"
       ghost-class="ghost"
       drag-class="drag"
+      tag="div"
     >
       <template #item="{ element: item, index }">
-        <div :key="item.tempId" class="edit-item">
-          <div
-            v-if="isSortMode"
-            class="drag-handle"
-            :class="{ 'no-image': !item.image }"
-            :aria-label="item.title"
-          ></div>
-          <div class="edit-item-inner">
-            <div
-              class="edit-item__image"
-              @click="
-                (
-                  $event.currentTarget.querySelector(
-                    'input[type=file]',
-                  ) as HTMLInputElement
-                ).click()
-              "
-            >
-              <i-octicon-file-media-24
-                class="edit-item__image-icon"
-                aria-label="画像"
-                v-if="!item.image"
-              />
-              <div class="edit-item__image-container">
-                <img v-if="item.image" :src="item.image" />
-                <i-octicon-plus-circle-24 v-else />
-              </div>
-              <input
-                type="file"
-                accept="image/*"
-                :disabled="isSortMode"
-                @change="onFileChange($event, index)"
-              />
-              <span class="btn btn-file">画像を選択</span>
-            </div>
-            <dl class="edit-item-data">
-              <div class="edit-item-data__item">
-                <dt>タイトル</dt>
-                <dd>
-                  <input
-                    v-model="item.title"
-                    class="input-title"
-                    placeholder="タイトル"
-                    @focus="selectAllText"
-                    type="text"
-                    :disabled="isSortMode"
-                  />
-                </dd>
-              </div>
-              <div class="edit-item-data__item">
-                <dt>価格</dt>
-                <dd>
-                  <div class="input-with-unit">
-                    <input
-                      v-model.number="item.price"
-                      type="number"
-                      min="0"
-                      inputmode="decimal"
-                      @focus="selectAllText"
-                      :disabled="isSortMode"
-                    />
-                    <span>円</span>
-                  </div>
-                </dd>
-              </div>
-              <div class="edit-item-data__item">
-                <dt>在庫</dt>
-                <dd>
-                  <div class="edit-item-data__stock">
-                    <input
-                      v-model.number="item.stock"
-                      type="number"
-                      min="0"
-                      inputmode="decimal"
-                      @focus="selectAllText"
-                      :disabled="isSortMode"
-                    />
-                    <label class="checkbox-label"
-                      ><input type="checkbox" v-model="item.infinite_stock" />
-                      無制限</label
-                    >
-                  </div>
-                </dd>
-              </div>
-            </dl>
-            <div class="edit-item__controls">
-              <label class="edit-item__visibility toggle-btn">
-                <i-octicon-eye-24 v-if="!item.hidden" aria-label="表示" />
-                <i-octicon-eye-closed-24
-                  v-if="item.hidden"
-                  aria-label="非表示"
-                />
-                <input type="checkbox" v-model="item.hidden" @change="gtmTrackEvent('toggle_visibility')" />
-              </label>
-              <div class="edit-item__order">
-                <button
-                  class="btn-order"
-                  @click="moveItem(index, 'up')"
-                  :disabled="index === 0 || isSortMode"
-                  aria-label="上に移動"
-                >
-                  <i-octicon-chevron-up-16 />
-                </button>
-                <button
-                  class="btn-order"
-                  @click="moveItem(index, 'down')"
-                  :disabled="
-                    index === (editableProducts?.length || 0) - 1 || isSortMode
-                  "
-                  aria-label="下に移動"
-                >
-                  <i-octicon-chevron-down-16 />
-                </button>
-              </div>
-              <button
-                @click="removeProduct(index)"
-                class="btn btn-remove-item"
-                aria-label="削除"
-              >
-                <i-octicon-trash-24 />
-              </button>
-            </div>
-            <div class="edit-item-meta">
-              <button
-                class="edit-item-meta__open"
-                :class="{ 'is-open': item.showMeta }"
-                @click="toggleMeta(item.tempId, index)"
-              >
-                <i-octicon-plus-circle-16 /> 追加情報
-              </button>
-              <div
-                :ref="(el) => setMetaRef(el, item.tempId)"
-                class="edit-item-meta__content"
-                :aria-hidden="(!item.showMeta).toString()"
-                :inert="!item.showMeta"
-              >
-                <dl class="edit-item-meta-data">
-                  <div class="edit-item-meta-data__item">
-                    <dt>発行日</dt>
-                    <dd>
-                      <label class="input-date">
-                        <span
-                          ><input
-                            v-model="item.pubdate"
-                            type="date"
-                            :disabled="isSortMode"
-                        /></span>
-                        <i-octicon-calendar-16 />
-                      </label>
-                    </dd>
-                  </div>
-                  <div class="edit-item-meta-data__item">
-                    <dt>印刷費</dt>
-                    <dd>
-                      <div class="input-with-unit">
-                        <input
-                          v-model.number="item.cost"
-                          type="number"
-                          min="0"
-                          inputmode="decimal"
-                          @focus="selectAllText"
-                          :disabled="isSortMode"
-                        />
-                        <span>円</span>
-                      </div>
-                    </dd>
-                  </div>
-                </dl>
-              </div>
-            </div>
-          </div>
-        </div>
+        <ProductAdminItem
+          :item="item"
+          :index="index"
+          :is-sort-mode="isSortMode"
+          :all-categories="allCategories"
+          :total-products="editableProducts.length"
+          @file-change="onFileChange"
+          @remove="removeProduct"
+          @move="moveItem"
+        />
       </template>
     </draggable>
   </div>
@@ -557,3 +418,4 @@ const toggleSortMode = () => {
     </button>
   </div>
 </template>
+<style scoped></style>

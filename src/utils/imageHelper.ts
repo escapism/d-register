@@ -104,18 +104,6 @@ export async function getResizedBlob(url: string): Promise<Blob | null> {
 }
 
 /**
- * 内容が等しいproductかどうか判定
- */
-export function productEqual(oldProduct, newProduct) {
-  if (!oldProduct) return false;
-
-  return Object.keys(oldProduct).reduce((acc, key) => {
-    acc = acc && oldProduct[key] == newProduct[key];
-    return acc;
-  }, true);
-}
-
-/**
  * BlobをBase64文字列に変換する（保存時のみ使用）
  */
 export async function convertToBase64(blob: Blob | undefined) {

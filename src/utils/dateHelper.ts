@@ -18,3 +18,10 @@ export function getDateString() {
 
   return `${date.getFullYear()}${String(date.getMonth() + 1).padStart(2, "0")}${String(date.getDate()).padStart(2, "0")}`
 }
+
+/**
+ * 今日の日付をYYYY-MM^DDで返す
+ */
+export function getDateValue() {
+  return new Date().toLocaleString("sv-SE").split(" ")[0] // YYYY-MM-DD
+}

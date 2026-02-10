@@ -2,8 +2,8 @@
 import { useTemplateRef, provide } from "vue";
 import Header from "@/components/Header.vue";
 import Popup from "@/components/Popup.vue";
-import Loader from "./components/Loader.vue";
-import CustomDialog from "./components/CustomDialog.vue";
+import Loader from "@/components/Loader.vue";
+import CustomDialog from "@/components/CustomDialog.vue";
 
 const dialog = useTemplateRef("dialog")
 const popup = useTemplateRef("popup")

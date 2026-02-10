@@ -7,7 +7,7 @@ if (!localStorage.getItem("confirmed")) {
 }
 </script>
 <template>
-  <div class="container page-container">
+  <div class="container page-container about-container">
     <h1 class="page-title"><i-octicon-alert-24 /> {{ router.meta.title }}</h1>
     <p>このアプリを利用するにあたって、あらかじめ「ホーム画面に追加」や「アプリのインストール」を行うことをおすすめします。</p>
 
@@ -24,10 +24,24 @@ if (!localStorage.getItem("confirmed")) {
       <p>また、ブラウザから開いた場合と、ホーム画面に追加した場合とで、データが別扱いになります。</p>
     </section>
     <section>
+      <h2>🤖 Androidユーザーの方へ</h2>
+      <p>Androidではブラウザとホーム画面に追加した場合とで、データは共通です。ただし、ブラウザ毎に別データとなります。</p>
+      <p>エクスポートしたJSONファイルをDropboxに保存した場合、インポートから選択できない不具合を確認しています。その場合は別のストレージに移してインポートしてください。</p>
+    </section>
+    <section>
       <h2>💾 バックアップ推奨</h2>
       <p>ブラウザのキャッシュクリアや履歴の削除、デバイスのストレージ不足などでデータが消去される可能性があります。</p>
       <p>「<router-link to="/admin">頒布物登録</router-link>」や「<router-link to="/settings">設定</router-link>」からデータのエクスポートを行い、バックアップを取るようにしてください。</p>
-      <p></p>
+      <p>頒布物登録からのエクスポート・インポートは頒布物情報のみです。また、インポートしても保存ボタンを押すまでは保存されません。<br>
+        <small>※頒布物登録から設定を含むJSONをインポートした場合も、頒布物情報だけを読み込みます。</small>
+      </p>
+      <p>設定からのエクスポート・インポートは売上情報を除いたすべてのデータです（オプションで売上も含めることができます）。<br>
+        <strong>インポートしたデータは即座に保存されるため、注意してください。</strong><br>
+        <small>※設定から頒布物情報のみのJSONをインポートすると、頒布物情報以外のデータはリセットされます。</small></p>
+    </section>
+    <section>
+      <h2>💰️ 売上データについて</h2>
+      <p>売上情報はデータ量が大きくなりがちなので、イベント終了後はCSVをダウンロードしてからの削除をおすすめします。</p>
     </section>
     <section>
       <h2>📈 アクセス解析</h2>
