@@ -3,6 +3,7 @@ import { ref, onMounted, inject } from "vue";
 import { useRoute } from "vue-router";
 import { db, type Term } from "@/db";
 import draggable from "vuedraggable";
+import { gtmTrackEvent, gtmTrackError } from "@/utils/gtm.ts";
 
 const route = useRoute();
 const openDialog = inject("globalDialog");
@@ -37,11 +38,13 @@ const addNewCategory = () => {
   });
 
   newCategoryName.value = "";
+  gtmTrackEvent("add_category")
 };
 
 // ローカルリストから削除
 const removeCategory = (index: number) => {
   categories.value.splice(index, 1);
+  gtmTrackEvent("remove_category")
 };
 
 // DBへの一括保存処理
@@ -103,9 +106,11 @@ const saveCategories = async () => {
       .sortBy("sortOrder");
     categories.value = terms;
 
+    gtmTrackEvent("save_category")
     popped("保存が完了しました");
   } catch (err) {
     console.error(err);
+    gtmTrackError("save_category")
     await openDialog("保存に失敗しました。再読込してください。");
   } finally {
     isSaving.value = false;

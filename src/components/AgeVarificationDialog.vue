@@ -1,6 +1,10 @@
 <script setup lang="ts">
 import { ref, useTemplateRef, nextTick } from "vue";
 
+const props = defineProps<{
+  showCheckoutDialog?: Boolean
+}>();
+
 const okBtn = useTemplateRef("okBtn");
 const isOpen = ref(false);
 let resolvePromise: Function;
@@ -25,13 +29,18 @@ const show = () => {
 
 const handleOk = () => {
   isOpen.value = false;
-  resolvePromise(true);
+  resolvePromise(1);
 };
 
 const handleCancel = () => {
   isOpen.value = false;
-  resolvePromise(false);
+  resolvePromise(0);
 };
+
+const handleClear = () => {
+  isOpen.value = false;
+  resolvePromise(-1);
+}
 
 const getBirthday = () => {
   const today = new Date();
@@ -46,18 +55,27 @@ const getBirthday = () => {
 defineExpose({ show });
 </script>
 <template>
-  <Transition name="fade">
-    <div v-show="isOpen" class="dialog-overlay" @click.self="handleCancel">
-      <div role="dialog" class="confirm-dialog age-valification-dialog">
-        <p>⚠️18禁アイテムが含まれています。<br>年齢確認を行ってください。</p>
-        <div class="birthday-check">{{ getBirthday() }} 生まで</div>
-        <div class="button-area">
-          <button @click="handleCancel" class="btn btn-cancel">
-            キャンセル
-          </button>
-          <button @click="handleOk" class="btn btn-confirm" ref="okBtn">OK</button>
+  <Teleport to="body">
+    <Transition name="fade">
+      <div v-show="isOpen" class="dialog-overlay" @click.self="handleCancel">
+        <div role="dialog" class="confirm-dialog age-valification-dialog">
+          <p>
+            ⚠️18禁アイテムが含まれています。<br />年齢確認を行ってください。
+          </p>
+          <div class="birthday-check">{{ getBirthday() }} 生まで</div>
+          <div class="button-area">
+            <button @click="handleClear" class="btn btn-cancel">
+              クリア
+            </button>
+            <button @click="handleCancel" class="btn btn-cancel">
+              キャンセル
+            </button>
+            <button @click="handleOk" class="btn btn-confirm" ref="okBtn">
+              {{ showCheckoutDialog ? "OK" : "確定" }}
+            </button>
+          </div>
         </div>
       </div>
-    </div>
-  </Transition>
+    </Transition>
+  </Teleport>
 </template>

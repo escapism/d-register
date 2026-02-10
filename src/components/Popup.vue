@@ -1,10 +1,11 @@
 <script setup lang="ts">
-import { ref, useTemplateRef, watch, onMounted } from "vue";
+import { ref, useTemplateRef, onMounted } from "vue";
+import { SAVING_DELAY } from "@/const/number";
 
 const popup = useTemplateRef("popup");
 const popupText = ref<String>();
 const active = ref(false);
-let popupTimer : number | undefined = undefined;
+let popupTimer: number | undefined = undefined;
 
 onMounted(() => {
   popup.value.addEventListener("transitionend", (e) => {
@@ -14,17 +15,17 @@ onMounted(() => {
       clearTimeout(popupTimer);
       popupTimer = setTimeout(() => {
         active.value = false;
-      }, 500);
+      }, SAVING_DELAY);
     } else {
-      popupText.value = ""
+      popupText.value = "";
     }
   });
 });
 
-const show = (message : string) => {
-  popupText.value = message
+const show = (message: string) => {
+  popupText.value = message;
   active.value = true;
-}
+};
 
 defineExpose({ show });
 </script>

@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { ref, onMounted, computed, inject } from "vue";
 import { useRoute } from 'vue-router';
-import { db } from "@/db";
+import { db, type Product } from "@/db";
 import { EXPORT_DELAY } from "@/const/number";
 import { getDateString } from "@/utils/dateHelper";
 import { gtmTrackEvent, gtmTrackError } from "@/utils/gtm.ts";
@@ -247,7 +247,7 @@ const deleteSales = async () => {
     </div>
     <div class="button-area">
       <router-link to="/sales/cancel" class="btn btn-history">
-        <i-octicon-history-16 /> 精算履歴・取消はこちら
+        <i-octicon-history-16 /> 精算履歴・取消
       </router-link>
     </div>
     <section>

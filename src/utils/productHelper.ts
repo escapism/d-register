@@ -24,7 +24,6 @@ export async function formatProductForSave(item, index = 0) {
     hidden: item.hidden ? 1 : 0,
     image: image,
   };
-  console.log(forSave)
 
   if (item.id !== undefined) {
     forSave.id = item.id
@@ -71,4 +70,11 @@ export function productEqual(oldProduct, newProduct) {
     }
     return acc;
   }, true);
+}
+
+/**
+ * 入力欄の全選択
+ */
+export function selectAllText(e: FocusEvent) {
+  (e.target as HTMLInputElement).select();
 }

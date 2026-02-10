@@ -47,7 +47,7 @@ export class MyDatabase extends Dexie {
 
   constructor() {
     super('DRegi');
-    this.version(2).stores({
+    this.version(1).stores({
       products: '++id, title, sortOrder, hidden, *terms.category',
       terms: '++id, taxonomy, sortOrder',
       options: 'key',

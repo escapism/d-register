@@ -1,10 +1,10 @@
 import { createApp } from "vue";
-import "./style.scss";
-import App from "./App.vue";
-import router from "./router.ts";
+import "@/style.scss";
+import App from "@/App.vue";
+import router from "@/router.ts";
 import { registerSW } from "virtual:pwa-register";
 import { createGtm, useGtm } from '@gtm-support/vue-gtm';
-import { getPageLocation } from "./utils/gtm.ts";
+import { getPageLocation } from "@/utils/gtm.ts";
 
 // Service Workerの登録
 registerSW({
