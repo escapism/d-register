@@ -8,7 +8,7 @@ interface SelectOption {
 }
 
 const props = defineProps<{
-  modelValue: (number | string)[]; // 選択されたIDの配列
+  modelValue: (number | string)[] | undefined; // 選択されたIDの配列
   options: SelectOption[]; // 選択肢のリスト
   placeholder?: string; // 未選択時の表示
   label?: string; // ダイアログ内のタイトル
@@ -24,7 +24,7 @@ const active = ref(false);
 const selectedNames = computed(() => {
   return (
     props.modelValue
-      .map((id) => props.options.find((opt) => opt.id === id)?.name)
+      ?.map((id) => props.options.find((opt) => opt.id === id)?.name)
       .filter(Boolean)
       .join(", ") ||
     props.placeholder ||
@@ -37,7 +37,7 @@ const closePanel = () => (active.value = false);
 
 // チェックボックス操作時の処理
 const handleCheck = (id: number | string, checked: boolean) => {
-  const newValue = [...props.modelValue];
+  const newValue = props.modelValue ? [...props.modelValue] : [];
   if (checked) {
     if (!newValue.includes(id)) newValue.push(id);
   } else {
@@ -67,7 +67,7 @@ const handleCheck = (id: number | string, checked: boolean) => {
         :value="selectedNames"
         readonly
         :placeholder="placeholder"
-        :class="{ 'is-empty': !modelValue.length }"
+        :class="{ 'is-empty': !modelValue?.length }"
       />
     </div>
 
@@ -81,7 +81,7 @@ const handleCheck = (id: number | string, checked: boolean) => {
                 <label>
                   <input
                     type="checkbox"
-                    :checked="modelValue.includes(opt.id)"
+                    :checked="modelValue?.includes(opt.id)"
                     @change="
                       (e) =>
                         handleCheck(

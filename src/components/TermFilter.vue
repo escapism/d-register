@@ -1,13 +1,18 @@
 <script setup lang="ts">
 import type { Term } from "@/db";
 import { gtmTrackEvent } from "@/utils/gtm.ts";
+import {TAXONOMY_DEFINITIONS, type TaxonomyName} from "@/const/taxonomy"
 
 const props = defineProps<{
   modelValue: number | "all";
-  categories: Term[];
+  taxonomy: TaxonomyName;
+  terms: Term[];
   disabled?: boolean;
   slug?: string;
 }>();
+
+const taxName = TAXONOMY_DEFINITIONS[props.taxonomy].label
+const icon = TAXONOMY_DEFINITIONS[props.taxonomy].icon
 
 const emit = defineEmits<{
   (e: "update:modelValue", value: number | "all"): void;
@@ -21,38 +26,24 @@ const handleChange = (event) => {
       : Number((event.target as HTMLSelectElement).value),
   );
   if (props.slug && !props.disabled) {
-    gtmTrackEvent("change_category_" + props.slug)
-  }
-};
-
-const handleClear = () => {
-  emit('update:modelValue', 'all')
-  if (props.slug) {
-    gtmTrackEvent("clear_category_" + props.slug)
+    gtmTrackEvent(`change_${props.taxonomy}_${props.slug}`)
   }
 };
 </script>
 
 <template>
-  <div class="filter-group">
-    <i-octicon-file-directory-24 aria-label="カテゴリー" />
+  <div class="filter">
+    <component :is="icon" :aria-label="taxName" />
     <select
       :value="modelValue"
       @change="handleChange"
       :disabled="disabled"
       :class="{ 'is-disabled': disabled }"
     >
-      <option value="all">すべてのカテゴリー</option>
-      <option v-for="cat in categories" :key="cat.id" :value="cat.id">
-        {{ cat.name }}
+      <option value="all">すべての{{ taxName }}</option>
+      <option v-for="term in terms" :key="term.id" :value="term.id">
+        {{ term.name }}
       </option>
     </select>
-    <button
-      aria-label="絞り込み解除"
-      @click="handleClear"
-      :disabled="modelValue === 'all'"
-    >
-      <i-octicon-x-24 />
-    </button>
   </div>
 </template>

@@ -106,21 +106,61 @@ const downloadSalesCSV = async () => {
   isExporting.value = true;
 
   try {
-    let csv = "日時,商品名,単価,数量,小計,精算ID\n";
+    const allTerms = await db.terms.toArray();
+    const termMap = new Map(allTerms.map(t => [t.id, t.name]));
+
+    // カテゴリー/ジャンルがマスターに存在するかチェック
+    const hasCategory = allTerms.some(t => t.taxonomy === 'category');
+    const hasGenre = allTerms.some(t => t.taxonomy === 'genre');
+
+    // ヘッダーの構築
+    const headerItems = ["精算ID", "日時", "品名", "単価", "数量", "小計"];
+    if (hasCategory) headerItems.push("カテゴリー");
+    if (hasGenre) headerItems.push("ジャンル");
+
+    let csv = headerItems.join(",") + "\n";
+
+    // データ行の生成
     sales.value.forEach((s) => {
-      csv +=
-        [
-          new Date(s.timestamp).toLocaleString("ja-JP"),
-          `"${s.productTitle}"`,
-          s.priceAtSale,
-          s.quantity,
-          s.priceAtSale * s.quantity,
-          s.transactionId || "N/A",
-        ].join(",") + "\n";
+      // マスターデータ(products)から現在のターム設定を取得
+      const currentProduct = products.value.find(p => p.id === s.productId);
+      
+      const rowItems = [
+        s.transactionId || "N/A",
+        new Date(s.timestamp).toLocaleString("ja-JP"),
+        `"${s.productTitle}"`,
+        s.priceAtSale,
+        s.quantity,
+        s.priceAtSale * s.quantity
+      ];
+
+      // カテゴリー列（存在する場合）
+      if (hasCategory) {
+        const cats = currentProduct?.terms?.category
+          ?.map(id => termMap.get(id))
+          .filter(Boolean)
+          .join("/") || "";
+        rowItems.push(`"${cats}"`);
+      }
+
+      // ジャンル列（存在する場合）
+      if (hasGenre) {
+        const genres = currentProduct?.terms?.genre
+          ?.map(id => termMap.get(id))
+          .filter(Boolean)
+          .join("/") || "";
+        rowItems.push(`"${genres}"`);
+      }
+
+      csv += rowItems.join(",") + "\n";
     });
 
-    // 末尾に合計行を追加
-    csv += `\n"合計",,,${totalQuantity.value},${totalAmount.value},`;
+    // フッター合計行
+    const totalRow = new Array(headerItems.length).fill("");
+    totalRow[0] = '"合計"';
+    totalRow[headerItems.indexOf("数量")] = totalQuantity.value;
+    totalRow[headerItems.indexOf("小計")] = totalAmount.value;
+    csv += `\n${totalRow.join(",")}\n`;
 
     downloadFile(csv, getExportFileName("sales_detail"));
     setTimeout(() => {
@@ -143,7 +183,7 @@ const downloadSalesOverviewCSV = async () => {
   isExporting2.value = true;
 
   try {
-    let csv = "商品名,頒布数,合計金額\n";
+    let csv = "品名,頒布数,合計金額\n";
     salesSummary.value.forEach((s) => {
       csv += [`"${s.title}"`, s.quantity, s.total].join(",") + "\n";
     });
