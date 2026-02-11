@@ -3,21 +3,23 @@ import { ref, computed, useTemplateRef, onMounted } from "vue";
 import { useObservable } from "@vueuse/rxjs";
 import { liveQuery } from "dexie";
 import { db } from "@/db";
-import { gtmTrackEvent } from "@/utils/gtm.ts"
+import { gtmTrackEvent } from "@/utils/gtm.ts";
 
 // サークル名取得
 const circleName = useObservable(
   liveQuery(async () => {
-    const opt = await db.options.get("circleName")
-    return opt ? opt.value : undefined
+    const opt = await db.options.get("circleName");
+    return opt ? opt.value : undefined;
   })
 );
 
+const header = useTemplateRef("header");
 const globalNav = useTemplateRef("globalNav");
 const activeMenu = ref(false);
-const appVersion = APP_VERSION
+const appVersion = APP_VERSION;
 
 let touchStartX = 0;
+let resizeTimer;
 
 onMounted(() => {
   globalNav.value.addEventListener("touchstart", (e) => {
@@ -25,9 +27,8 @@ onMounted(() => {
   });
 
   globalNav.value.addEventListener("touchmove", (e) => {
-
     const swipeDistance = touchStartX - e.changedTouches[0].screenX;
-    globalNav.value.style.transition = "nune"
+    globalNav.value.style.transition = "nune";
     globalNav.value.style.translate = `-${swipeDistance}px 0`;
   });
 
@@ -36,10 +37,21 @@ onMounted(() => {
     if (swipeDistance > globalNav.value.clientWidth * 0.25) {
       closeMenu();
     }
-    globalNav.value.style.transition = null
-    globalNav.value.style.translate = null
+    globalNav.value.style.transition = null;
+    globalNav.value.style.translate = null;
+  });
+
+  updateHeight();
+  window.addEventListener("resize", () => {
+    clearTimeout(resizeTimer);
+    setTimeout(updateHeight, 200);
   });
 });
+
+const updateHeight = () => {
+  const height = header.value?.offsetHeight;
+  document.documentElement.style.setProperty("--header-height", `${height}px`);
+};
 
 const toggleMenu = () => {
   if (activeMenu.value) {
@@ -47,39 +59,41 @@ const toggleMenu = () => {
   } else {
     openMenu();
   }
-  gtmTrackEvent("toggle_menu")
+  gtmTrackEvent("toggle_menu");
 };
 
 const openMenu = () => {
   activeMenu.value = true;
-  document.body.classList.add("is-menu-open")
+  document.body.classList.add("is-menu-open");
 };
 
 const closeMenu = () => {
   activeMenu.value = false;
-  document.body.classList.remove("is-menu-open")
+  document.body.classList.remove("is-menu-open");
 };
 
 const reload = () => {
-  window.location.reload()
+  window.location.reload();
 };
 
-const handleHeaderBtn = (event : string) => {
+const handleHeaderBtn = (event: string) => {
   if (event) {
-    gtmTrackEvent(event)
+    gtmTrackEvent(event);
   }
-  closeMenu()
-}
+  closeMenu();
+};
 const showCirclName = computed(() => {
   if (circleName.value === undefined) {
-    return "名称未設定サークル"
+    return "名称未設定サークル";
   }
-  return circleName.value
-})
+  return circleName.value;
+});
 </script>
 <template>
-  <header class="site-header">
-    <h1 class="circle-name" :class="{'anonymous' : circleName === undefined}">{{ showCirclName }}</h1>
+  <header class="site-header" ref="header">
+    <h1 class="circle-name" :class="{ anonymous: circleName === undefined }">
+      {{ showCirclName }}
+    </h1>
     <button
       class="header-btn menu-btn"
       aria-label="メニューを開く"
@@ -114,7 +128,12 @@ const showCirclName = computed(() => {
       ><i-octicon-file-added-24
     /></router-link>
   </header>
-  <nav class="global-nav" ref="globalNav" :class="{'is-active': activeMenu}" :inert="!activeMenu">
+  <nav
+    class="global-nav"
+    ref="globalNav"
+    :class="{ 'is-active': activeMenu }"
+    :inert="!activeMenu"
+  >
     <ul class="menu-list">
       <li>
         <router-link to="/" @click="closeMenu"

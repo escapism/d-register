@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, onMounted, watch, inject, nextTick, computed } from "vue";
+import { ref, onMounted, watch, inject, nextTick, computed, useTemplateRef } from "vue";
 import { useRoute } from "vue-router";
 import { db, type Product, type Term } from "@/db";
 import { convertToBase64, getResizedBlob } from "@/utils/imageHelper";
@@ -11,7 +11,8 @@ import { EXPORT_DELAY, SAVING_DELAY } from "@/const/number";
 import { gtmTrackEvent, gtmTrackError } from "@/utils/gtm.ts";
 import { getDateValue } from "@/utils/dateHelper";
 import ProductAdminItem from "@/components/ProductAdminItem.vue";
-import ProductFilter from "@/components/ProductFilter.vue";
+import TermFilterGroup from "@/components/TermFilterGroup.vue";
+import { fetchTerms } from "@/composables/useTerms";
 
 const openDialog = inject("globalDialog");
 const popped = inject("globalPopup");
@@ -25,22 +26,28 @@ interface EditableProduct extends Product {
   showMeta?: boolean;
 }
 
-const activeCategoryId = ref<number | "all">("all"); // カテゴリー選択状態
+const editItemList = useTemplateRef("editItemList")
 const editableProducts = ref<EditableProduct[]>([]);
+const allCategories = ref<Term[]>([]);
+const allGenres = ref<Term[]>([]);
+const activeCategoryId = ref<number | "all">("all"); // カテゴリー選択状態
+const activeGenreId = ref<number | "all">("all"); // ジャンル選択状態
+
 const isSortMode = ref(false); // 並び替えモード
 const isSaving = ref(false); // 保存中フラグ
 const isImported = ref(false); // インポート経由のデータかどうか
 const isExporting = ref(false);
 
-const allCategories = ref<Term[]>([]); // カテゴリー一覧
 let productDefault = { ...PRODUCT_DEFAULT };
 
 let saved = false;
 let tempId: number = 0;
+let headerHeight = 0
 
 watch(isSortMode, (val) => {
   if (val === true) {
     activeCategoryId.value = "all";
+    activeGenreId.value = "all";
   }
 });
 
@@ -61,20 +68,18 @@ onMounted(async () => {
     productDefault = { ...PRODUCT_DEFAULT, ...defaultOpt.value };
   }
 
-  // 商品とカテゴリーを並行してロード
-  const [allProducts, allTerms] = await Promise.all([
-    db.products.orderBy("sortOrder").toArray(),
-    db.terms.where("taxonomy").equals("category").sortBy("sortOrder"),
-  ]);
-  allCategories.value = allTerms;
+  allCategories.value = await fetchTerms("category");
+  allGenres.value = await fetchTerms("genre");
+
+  const allProducts = await db.products.orderBy("sortOrder").toArray();
 
   editableProducts.value = allProducts.map((p) => ({
     ...p,
     infinite_stock: p.infinite_stock ? 1 : 0,
     hidden: p.hidden ? 1 : 0,
     r18: p.r18 ? 1 : 0,
+    terms: p.terms || {},
     tempId: p.id!,
-    terms: p.terms || { category: [] },
     showMeta: productDefault.showMeta,
   }));
 
@@ -82,19 +87,29 @@ onMounted(async () => {
     const ids = allProducts.map((p) => p.id);
     tempId = Math.max(...ids);
   }
+  headerHeight = parseInt(getComputedStyle(document.documentElement).getPropertyValue('--header-height'));
 });
 
 // カテゴリー絞り込み
 const filteredProducts = computed({
   get: () => {
-    if (activeCategoryId.value === "all") return editableProducts.value;
-    return editableProducts.value.filter((p) =>
-      p.terms?.category?.includes(activeCategoryId.value as number),
-    );
+    if (activeCategoryId.value === "all" && activeGenreId.value === "all") {
+      return editableProducts.value;
+    }
+
+    return editableProducts.value.filter((p) => {
+      const matchCat =
+        activeCategoryId.value === "all" ||
+        p.terms?.category?.includes(activeCategoryId.value as number);
+      const matchGenre =
+        activeGenreId.value === "all" ||
+        p.terms?.genre?.includes(activeGenreId.value as number);
+      return matchCat && matchGenre;
+    });
   },
   set: (newValue) => {
     // 絞り込みなし（全件表示）の時だけ並び替えを許可する場合
-    if (activeCategoryId.value === "all") {
+    if (activeCategoryId.value === "all" && activeGenreId.value === "all") {
       editableProducts.value = newValue;
     }
   },
@@ -216,7 +231,7 @@ const importJSON = async (e: Event) => {
     const imported = importedRaw.map((p: Product, index) => {
       const productWithTerms = {
         ...p,
-        terms: p.terms || { category: [] },
+        terms: p.terms || {},
         tempId: index,
         showMeta: productDefault.showMeta,
       };
@@ -239,16 +254,23 @@ const importJSON = async (e: Event) => {
   }
 };
 
-// 商品データの terms.category から、DBに存在しないタームIDを除去する
+// 商品データの terms から、DBに存在しないタームIDを除去する
 const cleanupProductTerms = (product: Product) => {
-  if (!product.terms?.category) return product;
+  if (!product.terms?.category && !product.terms?.genre) return product;
 
-  // 現在DBから読み込んでいる allCategories に含まれるIDのみ残す
-  const validIds = new Set(allCategories.value.map((c) => c.id));
+  if (product.terms.category?.length) {
+    const validCategoryIds = new Set(allCategories.value.map((c) => c.id));
+    product.terms.category = product.terms.category.filter((id) =>
+      validCategoryIds.has(id),
+    );
+  }
 
-  product.terms.category = product.terms.category.filter((id) =>
-    validIds.has(id),
-  );
+  if (product.terms.genre?.length) {
+    const validGenreIds = new Set(allGenres.value.map((c) => c.id));
+    product.terms.genre = product.terms.genre.filter((id) =>
+      validGenreIds.has(id),
+    );
+  }
 
   return product;
 };
@@ -276,12 +298,14 @@ const addNewProduct = () => {
     pubdate: productDefault.pubdate === "today" ? getDateValue() : null,
     total_sales_amount: 0,
     sortOrder: 0,
+    showMeta: true,
   });
 
   gtmTrackEvent("add_product");
 
   nextTick(() => {
-    window.scrollTo(0, 0);
+    const top = editItemList.value?.$el.getBoundingClientRect().top
+    window.scrollTo(0, window.pageYOffset + top - headerHeight);
   });
 };
 
@@ -325,12 +349,18 @@ const toggleSortMode = () => {
     <h1 class="page-title">
       <i-octicon-file-added-24 /> {{ route.meta.title }}
     </h1>
-    <div class="pagination">
-      <router-link to="/admin/category" class="next">
-        カテゴリー管理
-        <i-octicon-arrow-right-16 />
-      </router-link>
-    </div>
+    <ul class="sub-menu">
+      <li>
+        <router-link to="/admin/terms/category">
+          <i-octicon-chevron-right-24 /> カテゴリー管理
+        </router-link>
+      </li>
+      <li>
+        <router-link to="/admin/terms/genre">
+          <i-octicon-chevron-right-24 /> ジャンル管理
+        </router-link>
+      </li>
+    </ul>
     <div class="buttons">
       <button @click="exportJSON" class="btn btn-dl" :disabled="isExporting">
         <i-octicon-download-16 /> エクスポート
@@ -346,14 +376,15 @@ const toggleSortMode = () => {
         />
       </label>
     </div>
-    <div class="admin-filter" v-if="allCategories.length">
-      <ProductFilter
-        v-model="activeCategoryId"
-        :categories="allCategories"
-        :disabled="isSortMode"
-        slug="admin"
-      />
-    </div>
+    <TermFilterGroup
+      v-if="allCategories.length || allGenres.length"
+      v-model:active-category="activeCategoryId"
+      v-model:active-genre="activeGenreId"
+      :categories="allCategories"
+      :genres="allGenres"
+      :disabled="isSortMode"
+      slug="admin"
+    />
     <div v-if="isImported" class="warning">
       <strong
         >⚠️
@@ -387,6 +418,7 @@ const toggleSortMode = () => {
 
     <draggable
       v-model="filteredProducts"
+      ref="editItemList"
       item-key="tempId"
       class="edit-item-list"
       :class="{ 'is-sort-mode': isSortMode }"
@@ -403,7 +435,9 @@ const toggleSortMode = () => {
           :index="index"
           :is-sort-mode="isSortMode"
           :all-categories="allCategories"
+          :all-genres="allGenres"
           :total-products="editableProducts.length"
+          :enable-r18="!!productDefault.enableR18"
           @file-change="onFileChange"
           @remove="removeProduct"
           @move="moveItem"

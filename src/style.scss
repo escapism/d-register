@@ -28,6 +28,7 @@ $controll-height: 3.5rem;
   --menu-width: 52vw;
   --site-padding: 0.75rem;
   --site-padding-bottom: 1.5rem;
+  --header-height: 0;
   font:
     16px/1.5 "M PLUS 1",
     sans-serif;
@@ -136,6 +137,7 @@ svg {
   width: 1em;
   :where(button) & {
     display: block;
+    margin: auto;
   }
   &.inline {
     position: relative;
@@ -237,9 +239,10 @@ input[type="date"] {
 
 ::-webkit-datetime-edit-fields-wrapper,
 ::-webkit-date-and-time-value,
-[useragentpart="-webkit-datetime-edit-fields-wrapper"] {
+[useragentpart="-webkit-datetime-edit-fields-wrapper"],
+[useragentpart="-webkit-date-and-time-value"] {
   margin: 0;
-  font-size: 0.875em;
+  font-size: 0.75em;
 }
 
 [role="dialog"],
@@ -320,6 +323,9 @@ main {
   &:has(+ .pagination) {
     margin-bottom: 0.125em;
   }
+  &:has(+ .sub-menu) {
+    margin-bottom: 0.5em;
+  }
   svg {
     width: 1.25em;
   }
@@ -329,15 +335,41 @@ main {
   display: flex;
   list-style: none;
   flex-wrap: wrap;
-  justify-content: end;
-  gap: 0.5em 1em;
-  margin: 1em 0 0;
+  justify-content: center;
+  gap: 1em;
+  margin: 0 0 1em;
   padding: 0;
-  font-size: 0.75em;
+  > li {
+    flex: 0 0 auto;
+    width: calc((100% - 1em) / 2);
+  }
   a {
     display: flex;
     align-items: center;
+    justify-content: center;
+    gap: 0.3em;
+    box-shadow: 0 0 0 1px var(--border-color);
+    padding: 0.25em 1em;
+    border-radius: 0.25em;
+    background: #333;
+    color: #fff;
+    font-size: 0.75em;
+    text-align: center;
     text-decoration: none;
+    &[aria-current="page"] {
+      opacity: 0.25;
+      pointer-events: none;
+    }
+  }
+  @media screen and (min-width: $midTablet) {
+    > li {
+      width: calc((100% - 2em) / 3);
+    }
+  }
+  @media screen and (min-width: $tablet) {
+    > li {
+      width: calc((100% - 3em) / 4);
+    }
   }
 }
 
@@ -448,6 +480,9 @@ main {
   display: flex;
   margin-bottom: 1.25rem;
   font-size: 0.75em;
+  &:has(+ .sub-menu) {
+    margin-bottom: 1em;
+  }
   a {
     display: flex;
     align-items: center;
@@ -684,37 +719,50 @@ main {
   }
 }
 
+.filter-block {
+  display: grid;
+  grid-template-columns: 1fr auto;
+}
+
 .register-filter {
   margin-bottom: 1px;
-  padding: 0.25em;
+  padding: 0.25em 0;
 }
 
 .admin-filter {
-  margin-top: 1em;
+  margin: 1em calc(var(--site-padding) * -1) 0;
 }
 
-.filter-group {
+.filter-container {
+  display: flex;
+}
+
+.filter {
   display: grid;
   grid-template-columns: auto 1fr auto;
   align-items: center;
+  width: 50%;
+  font-size: 0.875em;
+  &:only-child {
+    width: 100%;
+  }
   > svg {
-    margin-right: 0.25em;
+    margin: 0 0.5em;
   }
   &.disabled {
     > svg {
       opacity: 0.25;
     }
   }
-  button {
-    width: 2em;
-    aspect-ratio: 1/1;
-    svg {
-      width: 75%;
-      margin: auto;
-    }
-    &:disabled {
-      opacity: 0.25;
-    }
+  select {
+    width: 100%;
+  }
+}
+
+.clear-filter {
+  width: 1.5em;
+  &:disabled {
+    opacity: 0.25;
   }
 }
 
@@ -828,9 +876,6 @@ main {
     button {
       width: 2em;
       height: 1.5em;
-      svg {
-        margin: auto;
-      }
     }
     .is-sold-out & {
       filter: brightness(0.5);
@@ -864,18 +909,23 @@ main {
   z-index: 10;
   width: fit-content;
   line-height: 1;
+  opacity: 0.9;
   margin: 50% auto 0;
-  padding: .15em 0.5em .35em 1em;
   transform: translateY(-50%) rotate(-12deg);
-  background: var(--red);
-  mask: url(@/assets/tape.svg);
+  filter: drop-shadow(1px 1px rgba(#000, .2));
   font-size: 1.25em;
   letter-spacing: 0.5em;
   text-align: center;
+  span {
+    display: block;
+    background: var(--red);
+    padding: 0.15em 0.5em 0.35em 1em;
+    mask: url(@/assets/tape.svg);
+  }
 }
 
 .r18 {
-  $p: .375em;
+  $p: 0.375em;
   position: absolute;
   top: $p;
   left: $p;
@@ -1063,6 +1113,7 @@ main {
   flex-direction: column;
   gap: 1px;
   margin: 0 auto 4rem;
+  scroll-margin-top: 48px;
   &.is-sort-mode {
     --col: 4;
     display: grid;
@@ -1245,9 +1296,6 @@ main {
   &:disabled {
     opacity: 0.2;
   }
-  svg {
-    margin: auto;
-  }
   @media screen and (min-width: $midTablet) {
     svg {
       rotate: -90deg;
@@ -1376,6 +1424,7 @@ main {
     font-size: 0.875em;
     svg {
       transition: rotate 0.3s;
+      margin: 0;
     }
     &.is-open {
       svg {
@@ -1384,18 +1433,15 @@ main {
     }
   }
   &__content {
-    //height: auto;
+    display: grid;
+    grid-template-rows: 0fr;
     overflow: hidden;
-    margin-top: 0.5em;
+    margin-top: 0;
     transition: 0.3s;
-    transition-property: height, margin;
-    &[aria-hidden="true"] {
-      height: 0;
-      margin-top: 0;
-    }
-    @supports (interpolate-size: allow-keywords) {
-      //transition: 0.3s;
-      //transition-property: height, margin;
+    transition-property: grid-template-rows, margin;
+    .is-open + & {
+      grid-template-rows: 1fr;
+      margin-top: 0.5em;
     }
   }
 }
@@ -1404,6 +1450,7 @@ main {
   display: grid;
   grid-template-columns: auto 1fr auto 1fr;
   gap: 0.5em 1em;
+  overflow: hidden;
   &__item {
     display: grid;
     grid-column: span 2;
@@ -1433,6 +1480,13 @@ main {
     overflow: hidden;
     input {
       width: 100%;
+      height: 2em;
+    }
+  }
+  @-moz-document url-prefix() {
+    display: block;
+    svg {
+      display: none;
     }
   }
 }
@@ -1480,8 +1534,8 @@ main {
   }
 }
 
-/** admin/category */
-.add-category {
+/** admin/terms */
+.add-term {
   display: grid;
   grid-template-areas: "h h" "input btn";
   grid-template-columns: 1fr auto;
@@ -1500,7 +1554,7 @@ main {
   }
 }
 
-.category-list {
+.term-list {
   display: flex;
   list-style: none;
   flex-direction: column;
@@ -1509,25 +1563,30 @@ main {
   padding: 0;
   &__item {
     display: grid;
-    grid-template-areas: "handle input remove";
-    grid-template-columns: auto 1fr auto;
+    grid-template-areas: "handle input update remove";
+    grid-template-columns: auto 1fr auto auto;
     align-items: center;
+    gap: 0.25em;
     .drag-handle {
       display: flex;
       align-items: center;
       justify-content: center;
       height: 100%;
       width: 1.5em;
-      margin-right: 0.25em;
       border-radius: 0.25em;
       background: rgba(#fff, 0.1);
     }
     input {
       width: 100%;
     }
-  }
-  &__name {
-    margin-right: 0.5em;
+    .btn-update {
+      padding: 0.3334em 0.5em;
+      line-height: 2;
+      font-size: 0.75em;
+    }
+    .btn-remove-item {
+      padding: 0.5em;
+    }
   }
 }
 

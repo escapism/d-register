@@ -25,8 +25,8 @@ const resetOptions = () => {
   SETTING_SCHEMA.forEach((s) => {
     settings.value[s.key] = s.default;
   });
-}
-resetOptions()
+};
+resetOptions();
 
 watch(isSaving, (val) => {
   loader(val);
@@ -213,12 +213,12 @@ const deleteAllData = async () => {
 <template>
   <div class="container page-container">
     <h1 class="page-title"><i-octicon-gear-24 /> {{ router.meta.title }}</h1>
-    <div class="pagination">
-      <router-link to="/settings/product" class="next">
-        頒布物設定
-        <i-octicon-arrow-right-16 />
-      </router-link>
-    </div>
+
+    <ul class="sub-menu">
+      <li>
+        <router-link to="/settings/product"><i-octicon-chevron-right-24 />  頒布物設定</router-link>
+      </li>
+    </ul>
     <table class="setting-table">
       <tbody>
         <tr v-for="item in SETTING_SCHEMA" :key="item.key">

@@ -25,7 +25,7 @@ const isSoldOut = (item: Product) => !item.infinite_stock && item.stock == 0;
     v-show="showSoldoutItems || item.infinite_stock || item.stock > 0"
   >
     <div class="product-item-inner">
-      <div class="sold-out-label" v-if="isSoldOut(item)">完売</div>
+      <div class="sold-out-label" v-if="isSoldOut(item)"><span>完売</span></div>
       <div class="add-order" @click="emit('add')">
         <div class="product-item__title" v-if="showTitle && item.title && item.image">
           {{ item.title }}

@@ -21,6 +21,7 @@ export const PRODUCT_DEFAULT = {
   cost: null,
   hidden: 0,
   r18: 0,
-  terms: {category : []},
+  terms: {},
   showMeta: 0,
+  enableR18: 1,
 } as const;

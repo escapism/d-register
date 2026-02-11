@@ -1,5 +1,4 @@
 <script setup lang="ts">
-import { ref, nextTick } from "vue";
 import type { Term } from "@/db";
 import { selectAllText } from "@/utils/productHelper";
 import { gtmTrackEvent } from "@/utils/gtm.ts";
@@ -10,7 +9,9 @@ const props = defineProps<{
   index: number;
   isSortMode: boolean;
   allCategories: Term[];
+  allGenres: Term[];
   totalProducts: number;
+  enableR18: boolean;
 }>();
 
 const emit = defineEmits<{
@@ -21,31 +22,13 @@ const emit = defineEmits<{
   (e: 'gtm-event', action: string): void;
 }>();
 
-const metaContent = ref<HTMLElement | null>(null);
-
 const onImageClick = (e: MouseEvent) => {
   const input = (e.currentTarget as HTMLElement).querySelector('input[type=file]') as HTMLInputElement;
   input.click();
 };
 
-// アニメーション付きのトグルロジック
+// メタトグル
 const toggleMeta = () => {
-  if (!metaContent.value) return;
-  
-  if (props.item.showMeta) {
-    // 閉じるアニメーション
-    metaContent.value.style.height = metaContent.value.scrollHeight + "px";
-    nextTick(() => {
-      metaContent.value.style.height = 0;
-    });
-  } else {
-    // 開くとき：高さを0から実寸へ
-    metaContent.value.style.height = 0;
-    nextTick(() => {
-      metaContent.value.style.height = metaContent.value.scrollHeight + "px";
-    });
-  }
-
   props.item.showMeta = !props.item.showMeta;
   gtmTrackEvent("toggle_meta");
 };
@@ -184,9 +167,7 @@ const toggleMeta = () => {
           <i-octicon-plus-circle-16 /> 追加情報
         </button>
         <div
-          ref="metaContent"
           class="edit-item-meta__content"
-          :aria-hidden="(!item.showMeta).toString()"
           :inert="!item.showMeta"
         >
           <dl class="edit-item-meta-data">
@@ -217,7 +198,27 @@ const toggleMeta = () => {
                 </div>
               </dd>
             </div>
-            <div class="edit-item-meta-data__item">
+            <div class="edit-item-meta-data__item" v-if="allCategories.length">
+              <dt>カテゴリー</dt>
+              <dd>
+                <MultiSelector
+                  v-model="item.terms.category"
+                  :options="allCategories"
+                  :label="'カテゴリー＠' + item.title"
+                />
+              </dd>
+            </div>
+            <div class="edit-item-meta-data__item" v-if="allGenres.length">
+              <dt>ジャンル</dt>
+              <dd>
+                <MultiSelector
+                  v-model="item.terms.genre"
+                  :options="allGenres"
+                  :label="'ジャンル＠' + item.title"
+                />
+              </dd>
+            </div>
+            <div v-if="enableR18" class="edit-item-meta-data__item">
               <dt>R18</dt>
               <dd>
                 <input
@@ -226,16 +227,6 @@ const toggleMeta = () => {
                   :false-value="0"
                   type="checkbox"
                   :disabled="isSortMode"
-                />
-              </dd>
-            </div>
-            <div class="edit-item-meta-data__item" v-if="allCategories.length">
-              <dt>カテゴリー</dt>
-              <dd>
-                <MultiSelector
-                  v-model="item.terms.category"
-                  :options="allCategories"
-                  :label="'カテゴリー＠' + item.title"
                 />
               </dd>
             </div>

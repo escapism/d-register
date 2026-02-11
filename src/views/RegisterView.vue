@@ -1,16 +1,25 @@
 <script setup lang="ts">
-import { ref, useTemplateRef, watch, onMounted, computed, inject, reactive } from "vue";
+import {
+  ref,
+  useTemplateRef,
+  watch,
+  onMounted,
+  computed,
+  inject,
+  reactive,
+} from "vue";
 import { liveQuery } from "dexie";
 import { useObservable } from "@vueuse/rxjs";
 import { db, type Term } from "@/db";
 import { ulid } from "ulid";
 import { gtmTrackEvent, gtmTrackError } from "@/utils/gtm.ts";
 import ProductRegisterItem from "@/components/ProductRegisterItem.vue";
-import ImportantNotice from "@/components/ImportantNotice.vue"
-import ProductFilter from "@/components/ProductFilter.vue";
+import ImportantNotice from "@/components/ImportantNotice.vue";
+import TermFilterGroup from "@/components/TermFilterGroup.vue";
 import CheckoutDialog from "@/components/CheckoutDialog.vue";
 import AgeVerificationDialog from "@/components/AgeVerificationDialog.vue";
 import { SETTING_SCHEMA } from "@/const/setting";
+import { fetchTerms } from "@/composables/useTerms";
 
 const openDialog = inject("globalDialog");
 const popped = inject("globalPopup");
@@ -22,14 +31,16 @@ const products = useObservable(
   [],
 );
 const allCategories = ref<Term[]>([]);
+const allGenres = ref<Term[]>([]);
 const activeCategoryId = ref<number | "all">("all"); // カテゴリー選択状態
+const activeGenreId = ref<number | "all">("all"); // ジャンル選択状態
 const order = ref<number[]>([]);
 
 // 設定値
 const settings = reactive<Record<string, any>>({});
 
 // スキーマからデフォルト値を初期セット
-SETTING_SCHEMA.forEach(s => {
+SETTING_SCHEMA.forEach((s) => {
   settings[s.key] = s.default;
 });
 
@@ -42,17 +53,15 @@ const orderSummary = ref<{ title: string; count: number }[]>([]);
 const confirmed = ref(localStorage.getItem("confirmed"));
 
 onMounted(async () => {
-  allCategories.value = await db.terms
-    .where("taxonomy")
-    .equals("category")
-    .sortBy("sortOrder");
+  allCategories.value = await fetchTerms("category");
+  allGenres.value = await fetchTerms("genre");
 
   // 設定取得
   const allOpts = await db.options.toArray();
   const optMap = Object.fromEntries(allOpts.map((o) => [o.key, o.value]));
 
   // DBの値があるものは上書き
-  SETTING_SCHEMA.forEach(s => {
+  SETTING_SCHEMA.forEach((s) => {
     if (optMap[s.key] !== undefined) {
       settings[s.key] = optMap[s.key];
     }
@@ -79,13 +88,18 @@ watch(
 
 // カテゴリー絞り込み
 const filteredProducts = computed(() => {
-  if (activeCategoryId.value === "all") {
+  if (activeCategoryId.value === "all" && activeGenreId.value === "all") {
     return products.value;
   }
-  // 数値形式の category ID と比較
-  return products.value.filter((p) =>
-    p.terms?.category?.includes(activeCategoryId.value as number),
-  );
+  return products.value.filter((p) => {
+    const matchCat =
+      activeCategoryId.value === "all" ||
+      p.terms?.category?.includes(activeCategoryId.value as number);
+    const matchGenre =
+      activeGenreId.value === "all" ||
+      p.terms?.genre?.includes(activeGenreId.value as number);
+    return matchCat && matchGenre;
+  });
 });
 
 const addOrder = (index: number) => {
@@ -126,7 +140,7 @@ const getTotal = () => {
 };
 
 const columns = computed(() => {
-  if (settings.numCols !== 3) return
+  if (settings.numCols !== 3) return;
   return {
     "--columns": settings.numCols,
   };
@@ -187,7 +201,7 @@ const executeCheckout = async () => {
 
         // 1. 商品マスターの更新（在庫減 + 売上加算）
         await db.products.update(item.id, {
-          stock: Math.max(0, item.stock - quantity),
+          stock: item.infinite_stock ? item.stock: Math.max(0, item.stock - quantity),
           total_sales_amount:
             (item.total_sales_amount || 0) + item.price * quantity,
         });
@@ -220,15 +234,21 @@ const executeCheckout = async () => {
     <div class="notice" v-else-if="!existsProduct">
       <p><router-link to="/admin">頒布物を登録</router-link>してください。</p>
     </div>
-    <div
-      class="register-filter"
-      v-if="existsProduct && settings.enableFiltering && allCategories.length"
-    >
-      <ProductFilter v-model="activeCategoryId" :categories="allCategories" slug="register" />
-    </div>
+    <TermFilterGroup
+      v-if="
+        existsProduct &&
+        settings.enableFiltering &&
+        (allCategories.length || allGenres.length)
+      "
+      v-model:active-category="activeCategoryId"
+      v-model:active-genre="activeGenreId"
+      :categories="allCategories"
+      :genres="allGenres"
+      slug="register"
+    />
     <ul class="product-list" :style="columns">
       <ProductRegisterItem
-        v-for="(item, index) in filteredProducts"
+        v-for="item in filteredProducts"
         :key="item.id"
         :item="item"
         :order-count="order[products.indexOf(item)] || 0"
@@ -269,5 +289,9 @@ const executeCheckout = async () => {
     @clear="handleClear"
     @cancel="gtmTrackEvent('cancel_checkout')"
   />
-  <AgeVerificationDialog v-if="settings.showAgeVerification" ref="verificationDialog" :showCheckoutDialog="settings.showCheckoutDialog" />
+  <AgeVerificationDialog
+    v-if="settings.showAgeVerification"
+    ref="verificationDialog"
+    :showCheckoutDialog="settings.showCheckoutDialog"
+  />
 </template>

@@ -7,6 +7,7 @@ import { PRODUCT_DEFAULT } from "@/const/setting";
 import { gtmTrackEvent, gtmTrackError } from "@/utils/gtm.ts";
 import { SAVING_DELAY } from "@/const/number";
 import MultiSelector from "@/components/MultiSelector.vue";
+import { fetchTerms } from "@/composables/useTerms";
 
 const route = useRoute();
 const openDialog = inject("globalDialog") as any;
@@ -15,6 +16,7 @@ const loader = inject("globalLoader") as any;
 
 const productDefault = ref<any>({ ...PRODUCT_DEFAULT });
 const allCategories = ref<Term[]>([]);
+const allGenres = ref<Term[]>([]);
 const isSaving = ref(false);
 let saved = false;
 
@@ -33,10 +35,8 @@ onMounted(async () => {
     productDefault.value = { ...PRODUCT_DEFAULT, ...opt.value };
   }
 
-  allCategories.value = await db.terms
-    .where("taxonomy")
-    .equals("category")
-    .sortBy("sortOrder");
+  allCategories.value = await fetchTerms("category");
+  allGenres.value = await fetchTerms("genre");
 });
 
 const saveSettings = async () => {
@@ -165,7 +165,7 @@ const categoriesStr = () => {
           </div>
         </div>
         <div class="edit-item-meta">
-          <div class="edit-item-meta__open">追加情報</div>
+          <div class="edit-item-meta__open is-open">追加情報</div>
           <div class="edit-item-meta__content">
             <dl class="edit-item-meta-data">
               <div class="edit-item-meta-data__item">
@@ -196,17 +196,6 @@ const categoriesStr = () => {
                   </div>
                 </dd>
               </div>
-              <div class="edit-item-meta-data__item">
-                <dt>R18</dt>
-                <dd>
-                  <input
-                    v-model="productDefault.r18"
-                    :true-value="1"
-                    :false-value="0"
-                    type="checkbox"
-                  />
-                </dd>
-              </div>
               <div
                 class="edit-item-meta-data__item"
                 v-if="allCategories.length"
@@ -217,6 +206,30 @@ const categoriesStr = () => {
                     v-model="productDefault.terms.category"
                     :options="allCategories"
                     label="デフォルトカテゴリー"
+                  />
+                </dd>
+              </div>
+              <div
+                class="edit-item-meta-data__item"
+                v-if="allGenres.length"
+              >
+                <dt>ジャンル</dt>
+                <dd>
+                  <MultiSelector
+                    v-model="productDefault.terms.genre"
+                    :options="allGenres"
+                    label="デフォルトジャンル"
+                  />
+                </dd>
+              </div>
+              <div class="edit-item-meta-data__item">
+                <dt>R18</dt>
+                <dd>
+                  <input
+                    v-model="productDefault.r18"
+                    :true-value="1"
+                    :false-value="0"
+                    type="checkbox"
                   />
                 </dd>
               </div>
@@ -234,6 +247,17 @@ const categoriesStr = () => {
             <input
               type="checkbox"
               v-model="productDefault.showMeta"
+              :true-value="1"
+              :false-value="0"
+            />
+          </td>
+        </tr>
+        <tr>
+          <th>R18選択を表示</th>
+          <td>
+            <input
+              type="checkbox"
+              v-model="productDefault.enableR18"
               :true-value="1"
               :false-value="0"
             />
