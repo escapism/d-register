@@ -16,7 +16,7 @@ export const PRODUCT_DEFAULT = {
   title : "",
   price: 500,
   stock: 10,
-  infinite_stock: 0,
+  infiniteStock: 0,
   pubdate: "",
   cost: null,
   hidden: 0,

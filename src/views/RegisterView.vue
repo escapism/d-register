@@ -105,7 +105,7 @@ const filteredProducts = computed(() => {
 const addOrder = (index: number) => {
   if (!products.value) return;
   const item = products.value[index];
-  if (item.infinite_stock) {
+  if (item.infiniteStock) {
     order.value[index]++;
   } else {
     order.value[index] = Math.min(order.value[index] + 1, item.stock);
@@ -201,9 +201,9 @@ const executeCheckout = async () => {
 
         // 1. 商品マスターの更新（在庫減 + 売上加算）
         await db.products.update(item.id, {
-          stock: item.infinite_stock ? item.stock: Math.max(0, item.stock - quantity),
-          total_sales_amount:
-            (item.total_sales_amount || 0) + item.price * quantity,
+          stock: item.infiniteStock ? item.stock: Math.max(0, item.stock - quantity),
+          totalSalesAmount:
+            (item.totalSalesAmount || 0) + item.price * quantity,
         });
 
         // 2. 売上明細の記録

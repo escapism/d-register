@@ -15,14 +15,14 @@ const emit = defineEmits<{
   (e: 'zero'): void;
 }>();
 
-const isSoldOut = (item: Product) => !item.infinite_stock && item.stock == 0;
+const isSoldOut = (item: Product) => !item.infiniteStock && item.stock == 0;
 </script>
 
 <template>
   <li
     class="product-item"
     :class="{ 'is-sold-out': isSoldOut(item) }"
-    v-show="showSoldoutItems || item.infinite_stock || item.stock > 0"
+    v-show="showSoldoutItems || item.infiniteStock || item.stock > 0"
   >
     <div class="product-item-inner">
       <div class="sold-out-label" v-if="isSoldOut(item)"><span>完売</span></div>
@@ -46,7 +46,7 @@ const isSoldOut = (item: Product) => !item.infinite_stock && item.stock == 0;
       <div class="product-item__control">
         <div class="product-item__order" :class="{ ordered: orderCount }">
           <span>{{ orderCount }}</span>
-          <span v-if="showStock && !item.infinite_stock">
+          <span v-if="showStock && !item.infiniteStock">
             / {{ item.stock }}
           </span>
         </div>

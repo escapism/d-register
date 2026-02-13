@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { useTemplateRef } from "vue";
 import type { Term } from "@/db";
 import { selectAllText } from "@/utils/productHelper";
 import { gtmTrackEvent } from "@/utils/gtm.ts";
@@ -23,9 +24,10 @@ const emit = defineEmits<{
 }>();
 
 const onImageClick = (e: MouseEvent) => {
-  const input = (e.currentTarget as HTMLElement).querySelector('input[type=file]') as HTMLInputElement;
-  input.click();
+  fileInput.value?.click();
 };
+
+const fileInput = useTemplateRef("fileInput")
 
 // メタトグル
 const toggleMeta = () => {
@@ -55,6 +57,7 @@ const toggleMeta = () => {
           <i-octicon-plus-circle-24 v-else />
         </div>
         <input
+          ref="fileInput"
           type="file"
           accept="image/*"
           :disabled="isSortMode"
@@ -108,7 +111,7 @@ const toggleMeta = () => {
               <label class="checkbox-label">
                 <input
                   type="checkbox"
-                  v-model="item.infinite_stock"
+                  v-model="item.infiniteStock"
                   :true-value="1"
                   :false-value="0"
                 />

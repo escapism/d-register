@@ -1,7 +1,7 @@
 
 import { db } from "@/db"
 import { getDateString } from "@/utils/dateHelper";
-import {sanitizeImportedProduct} from "@/utils/productHelper"
+import {sanitizeImportedProduct, resolveTermsByName} from "@/utils/productHelper"
 
 /**
  * データをJSONファイルとしてダウンロードさせる
@@ -34,6 +34,14 @@ export async function importFromJson(file : File, property="") {
     const products = Array.isArray(data) ? data : data.products
     if (products) {
       const sanitizedProducts = await Promise.all(products.map(sanitizeImportedProduct))
+
+      if (property === "products") {
+        for (const p of sanitizedProducts) {
+          if (p.terms) {
+            p.terms = await resolveTermsByName(p.terms)
+          }
+        }
+      }
 
       if (property === "products") {
         return sanitizedProducts

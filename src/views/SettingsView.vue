@@ -3,6 +3,7 @@ import { ref, onMounted, watch, inject } from "vue";
 import { useRoute } from "vue-router";
 import { db } from "@/db";
 import { exportToJson, importFromJson } from "@/composables/useFileIO";
+import { resolveTermsByName} from "@/utils/productHelper"
 import { EXPORT_DELAY, SAVING_DELAY } from "@/const/number";
 import { gtmTrackEvent, gtmTrackError } from "@/utils/gtm.ts";
 import { SETTING_SCHEMA } from "@/const/setting";
@@ -151,14 +152,19 @@ const importAllData = async (e: Event) => {
           await db.options.bulkPut(data.options);
         }
 
-        // 頒布物 (products) の上書き
-        if (data.products) {
-          await db.products.bulkPut(data.products);
-        }
-
         // ターム (terms) の上書き
         if (data.terms) {
           await db.terms.bulkPut(data.terms);
+        }
+
+        // 頒布物 (products) の上書き
+        if (data.products) {
+          for (const p of data.products) {
+            if (p.terms) {
+              p.terms = await resolveTermsByName(p.terms);
+            }
+          }
+          await db.products.bulkPut(data.products);
         }
 
         // 売上データがJSONに含まれている場合のみ処理
@@ -216,7 +222,9 @@ const deleteAllData = async () => {
 
     <ul class="sub-menu">
       <li>
-        <router-link to="/settings/product"><i-octicon-chevron-right-24 />  頒布物設定</router-link>
+        <router-link to="/settings/product"
+          ><i-octicon-chevron-right-24 /> 頒布物設定</router-link
+        >
       </li>
     </ul>
     <table class="setting-table">

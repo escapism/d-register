@@ -19,7 +19,13 @@ const newTermName = ref("");
 
 // データの読み込み
 const loadData = async () => {
-  terms.value = await fetchTerms(taxonomy.value);
+  terms.value = (await fetchTerms(taxonomy.value)).map(term => {
+    return {
+      ...term,
+      current_name: term.name
+    }
+  })
+  newTermName.value = ""
 };
 
 // URLパラメータが変わったら再読み込み
@@ -33,20 +39,37 @@ watchEffect(() => {
 
 // 項目の追加
 const addTerm = async (event?: KeyboardEvent) => {
-  if (!newTermName.value.trim()) return;
-
   // IME変換中のEnterキー入力を無視する
   if (event && event.isComposing) return;
+
+  const name = newTermName.value.trim()
+  if (!name) return;
+
+  // 重複チェック
+  const exists = await db.terms
+    .where({ taxonomy: taxonomy.value, name: name })
+    .count();
+
+  if (exists > 0) {
+    openDialog(`その${definition.value.label}名は既に登録されています`);
+    return;
+  }
 
   const newTerm: Omit<Term, "id"> = {
     taxonomy: taxonomy.value,
     name: newTermName.value,
     sortOrder: terms.value.length,
   };
-  const id = await db.terms.add(newTerm as Term);
-  terms.value.push({ ...newTerm, id } as Term);
 
-  newTermName.value = ""
+  try {
+    const id = await db.terms.add(newTerm as Term);
+    terms.value.push({ ...newTerm, id, current_name: newTerm.name } as Term);
+    newTermName.value = ""
+    gtmTrackEvent("add_" + taxonomy.value);
+  } catch (err) {
+    console.error(err);
+    gtmTrackError("add_" + taxonomy.value);
+  }
 };
 
 // 並び替えの保存
@@ -60,14 +83,27 @@ const saveOrder = async () => {
 
 // 名前の更新
 const updateName = async (term: Term, event?: KeyboardEvent) => {
-  const trimmedName = term.name.trim();
-  if (!trimmedName) return;
-
   // IME変換中のEnterキー入力を無視する
   if (event && event.isComposing) return;
 
+  const newName = term.name.trim();
+  if (!newName) return;
+
+  // 自身以外の同名タームをチェック
+  const exists = await db.terms
+    .where({ taxonomy: taxonomy.value, name: newName })
+    .filter(t => t.id !== term.id)
+    .count();
+  
+  if (exists > 0) {
+    openDialog(`その${definition.value.label}名は既に登録されています`);
+    term.name = term.current_name
+    return;
+  }
+
   try {
-    await db.terms.update(term.id!, { name: trimmedName });
+    await db.terms.update(term.id!, { name: newName });
+    term.current_name = term.name
     gtmTrackEvent("change_" + taxonomy.value + "_name");
     popped("更新しました");
   } catch (err) {

@@ -66,6 +66,7 @@ const salesSummary = computed(() => {
     // 印刷費。マスターになければ売上データからは不明なので0（または計算から除外）
     const cost = currentProduct?.cost || 0;
     const isPaidOff = cost > 0 ? soldItem.total >= cost : false;
+    paidOff.value = paidOff.value || isPaidOff
 
     return {
       id: soldItem.id,

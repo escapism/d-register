@@ -6,10 +6,10 @@ export interface Product {
   title: string;
   price: number;
   stock: number;
-  infinite_stock: 0 | 1;
+  infiniteStock: 0 | 1;
   pubdate: string;
   cost: number | null;
-  total_sales_amount: number;
+  totalSalesAmount: number;
   image?: Blob | string;
   sortOrder: number;
   hidden: 0 | 1;

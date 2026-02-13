@@ -131,7 +131,7 @@ const categoriesStr = () => {
                 <label class="checkbox-label"
                   ><input
                     type="checkbox"
-                    v-model="productDefault.infinite_stock"
+                    v-model="productDefault.infiniteStock"
                     :true-value="1"
                     :false-value="0"
                   />

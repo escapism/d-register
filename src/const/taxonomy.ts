@@ -14,4 +14,5 @@ export const TAXONOMY_DEFINITIONS = {
   },
 } as const;
 
+export const TAXONOMY_NAMES = Object.keys(TAXONOMY_DEFINITIONS) as const
 export type TaxonomyName = keyof typeof TAXONOMY_DEFINITIONS;

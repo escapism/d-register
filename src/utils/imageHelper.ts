@@ -1,4 +1,4 @@
-import { MAX_IMAGE_WIDTH } from "@/const/number";
+import { MAX_IMAGE_SIZE } from "@/const/number";
 
 const isCanvasSupportedWebp = (() => {
   let toBlobSupportWebp: boolean | undefined = undefined;
@@ -16,22 +16,20 @@ const isCanvasSupportedWebp = (() => {
 /**
  * 画像リサイズ
  */
-async function imageConverter(url: string, max_width: number = 480) {
+async function imageConverter(img: HTMLImageElement, max_size: number = 480) {
   try {
-    const img: HTMLImageElement = await new Promise((resolve, reject) => {
-      const img = new Image();
-      img.crossOrigin = "anonymous";
-      img.onload = () => resolve(img);
-      img.onerror = (e) => reject(e);
-      img.src = url;
-    });
-
     const aspectRatio = img.height / img.width;
     const canvas = document.createElement("canvas");
     const ctx = canvas.getContext("2d");
 
-    canvas.width = max_width;
-    canvas.height = aspectRatio * max_width;
+    if (aspectRatio >= 1) {
+      canvas.width = max_size;
+      canvas.height = Math.round(max_size * aspectRatio);
+    } else {
+      canvas.height = max_size;
+      canvas.width = Math.round(max_size / aspectRatio);
+
+    }
 
     ctx?.drawImage(img, 0, 0, canvas.width, canvas.height);
 
@@ -57,12 +55,13 @@ export function base64ToBlob(base64: string): Blob {
 }
 
 /**
- * 画像の横幅を取得する
+ * 画像<img>を取得する
  */
-export function getImageWidth(url: string): Promise<number> {
+export async function getImage(url: string): Promise<HTMLImageElement> {
   return new Promise((resolve) => {
     const img = new Image();
-    img.onload = () => resolve(img.width);
+    img.crossOrigin = "anonymous";
+    img.onload = () => resolve(img);
     img.onerror = () => resolve(0);
     img.src = url;
   });
@@ -72,22 +71,15 @@ export function getImageWidth(url: string): Promise<number> {
  * リサイズしたBlobを取得
  */
 export async function getResizedBlob(url: string): Promise<Blob | null> {
-  // 1. まずは画像サイズを調べる
-  const img: HTMLImageElement = await new Promise((resolve, reject) => {
-    const img = new Image();
-    img.crossOrigin = "anonymous";
-    img.onload = () => resolve(img);
-    img.onerror = reject;
-    img.src = url;
-  });
-
-  // 2. すでに制限サイズ以下なら、変換せず元のデータをBlobとして取得
-  if (img.width <= MAX_IMAGE_WIDTH) {
+  // すでに制限サイズ以下なら、変換せず元のデータをBlobとして取得
+  const img = await getImage(url)
+  const aspectRatio = img.height / img.width
+  if ((aspectRatio >= 1 && img.width <= MAX_IMAGE_SIZE) || (aspectRatio <1 && img.height <= MAX_IMAGE_SIZE)) {
     const response = await fetch(url);
     return await response.blob();
   }
 
-  const canvas = await imageConverter(url, MAX_IMAGE_WIDTH);
+  const canvas = await imageConverter(img, MAX_IMAGE_SIZE);
   if (!canvas) return null;
 
   return new Promise((resolve) => {

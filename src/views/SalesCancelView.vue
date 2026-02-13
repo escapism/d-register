@@ -42,9 +42,9 @@ const voidTransaction = async (tx: any) => {
         const p = await db.products.get(sale.productId);
         if (p) {
           await db.products.update(p.id, {
-            stock: p.infinite_stock ? p.stock : p.stock + sale.quantity,
-            total_sales_amount:
-              p.total_sales_amount - sale.priceAtSale * sale.quantity,
+            stock: p.infiniteStock ? p.stock : p.stock + sale.quantity,
+            totalSalesAmount:
+              p.totalSalesAmount - sale.priceAtSale * sale.quantity,
           });
         }
       }

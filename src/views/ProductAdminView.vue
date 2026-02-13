@@ -3,7 +3,7 @@ import { ref, onMounted, watch, inject, nextTick, computed, useTemplateRef } fro
 import { useRoute } from "vue-router";
 import { db, type Product, type Term } from "@/db";
 import { convertToBase64, getResizedBlob } from "@/utils/imageHelper";
-import { formatProductForSave, productEqual } from "@/utils/productHelper";
+import { formatProductForSave, productEqual, formatProductsForExport } from "@/utils/productHelper";
 import { exportToJson, importFromJson } from "@/composables/useFileIO";
 import draggable from "vuedraggable";
 import { PRODUCT_DEFAULT } from "@/const/setting";
@@ -75,7 +75,7 @@ onMounted(async () => {
 
   editableProducts.value = allProducts.map((p) => ({
     ...p,
-    infinite_stock: p.infinite_stock ? 1 : 0,
+    infiniteStock: p.infiniteStock ? 1 : 0,
     hidden: p.hidden ? 1 : 0,
     r18: p.r18 ? 1 : 0,
     terms: p.terms || {},
@@ -205,8 +205,9 @@ const exportJSON = async () => {
       isExporting.value = false;
       return;
     }
+    const formatProducts = await formatProductsForExport(products)
 
-    await exportToJson(products, `products_backup`);
+    await exportToJson(formatProducts, `products_backup`);
     setTimeout(() => {
       isExporting.value = false;
     }, EXPORT_DELAY);
@@ -229,20 +230,23 @@ const importJSON = async (e: Event) => {
 
     // インポートされた各商品に対してクリーンアップを実行
     const imported = importedRaw.map((p: Product, index) => {
-      const productWithTerms = {
+      return {
         ...p,
         terms: p.terms || {},
         tempId: index,
         showMeta: productDefault.showMeta,
       };
-
-      return cleanupProductTerms(productWithTerms);
     });
 
     imported.sort((a, b) => a.sortOrder - b.sortOrder);
 
     editableProducts.value = imported;
     tempId = imported.length;
+
+    // ターム再読み込み
+    allCategories.value = await fetchTerms("category");
+    allGenres.value = await fetchTerms("genre");
+
     isImported.value = true; // インポートフラグ
     gtmTrackEvent("import_products");
     await openDialog("インポートしました。保存ボタンを押すと確定します。");
@@ -252,27 +256,6 @@ const importJSON = async (e: Event) => {
   } finally {
     (e.target as HTMLInputElement).value = "";
   }
-};
-
-// 商品データの terms から、DBに存在しないタームIDを除去する
-const cleanupProductTerms = (product: Product) => {
-  if (!product.terms?.category && !product.terms?.genre) return product;
-
-  if (product.terms.category?.length) {
-    const validCategoryIds = new Set(allCategories.value.map((c) => c.id));
-    product.terms.category = product.terms.category.filter((id) =>
-      validCategoryIds.has(id),
-    );
-  }
-
-  if (product.terms.genre?.length) {
-    const validGenreIds = new Set(allGenres.value.map((c) => c.id));
-    product.terms.genre = product.terms.genre.filter((id) =>
-      validGenreIds.has(id),
-    );
-  }
-
-  return product;
 };
 
 // 指定したインデックスの要素を移動させる
@@ -296,7 +279,7 @@ const addNewProduct = () => {
     tempId: ++tempId,
     title: productDefault.title || "",
     pubdate: productDefault.pubdate === "today" ? getDateValue() : null,
-    total_sales_amount: 0,
+    totalSalesAmount: 0,
     sortOrder: 0,
     showMeta: true,
   });
