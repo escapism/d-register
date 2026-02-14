@@ -7,7 +7,7 @@ import Components from "unplugin-vue-components/vite";
 import IconsResolver from "unplugin-icons/resolver";
 import { fileURLToPath, URL } from 'node:url'
 
-const base = process.env.NODE_ENV === 'production' ? '/d-register/' : '/'
+const base = "/d-register/"
 
 // https://vite.dev/config/
 export default defineConfig({
@@ -43,6 +43,7 @@ export default defineConfig({
         description: '同人誌即売会用レジアプリ',
         theme_color: '#131416',
         background_color: '#131416',
+        lang: "ja",
         icons: [
           { src: `${base}icon-192.png`, sizes: '192x192', type: 'image/png' },
           { src: `${base}icon-512.png`, sizes: '512x512', type: 'image/png' }

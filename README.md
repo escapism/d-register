@@ -17,6 +17,10 @@
 - **売上管理**: 頒布数、金額の確認、精算履歴確認・取消、CSV書き出し。
 - **バックアップ機能**: バックアップ用のJSONエクスポート・インポート機能。
 
+#### 🔧専用ツール
+パソコンなどの大きな画面で一括で頒布物を編集したい方のために、外部ツール「[Dレジエディター](https://github.com/escapism/d-regi-editor)」を用意しています。  
+Dレジで書き出したJSONファイルを読み込んで、表計算ライクな画面で編集ができます。
+
 ## 連絡先
 **サークル：[うつつのがれ](https://portal.circle.ms/Circle/Index/10442466)**
 - X (Twitter): [@escapist_uco](https://x.com/escapist_uco)
