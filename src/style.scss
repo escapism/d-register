@@ -494,6 +494,11 @@ main {
   }
 }
 
+.note {
+  font-size: 0.875em;
+  color: var(--grey);
+}
+
 // Header
 .site-header {
   display: grid;

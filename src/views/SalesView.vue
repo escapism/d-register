@@ -5,6 +5,7 @@ import { db, type Product } from "@/db";
 import { EXPORT_DELAY } from "@/const/number";
 import { getDateString } from "@/utils/dateHelper";
 import { gtmTrackEvent, gtmTrackError } from "@/utils/gtm.ts";
+import { escapeCSV } from "@/utils/csvHelper";
 
 const router = useRoute()
 
@@ -129,7 +130,7 @@ const downloadSalesCSV = async () => {
       const rowItems = [
         s.transactionId || "N/A",
         new Date(s.timestamp).toLocaleString("ja-JP"),
-        `"${s.productTitle}"`,
+        escapeCSV(s.productTitle),
         s.priceAtSale,
         s.quantity,
         s.priceAtSale * s.quantity
@@ -141,7 +142,7 @@ const downloadSalesCSV = async () => {
           ?.map(id => termMap.get(id))
           .filter(Boolean)
           .join("/") || "";
-        rowItems.push(`"${cats}"`);
+        rowItems.push(escapeCSV(cats));
       }
 
       // ジャンル列（存在する場合）
@@ -186,7 +187,7 @@ const downloadSalesOverviewCSV = async () => {
   try {
     let csv = "品名,頒布数,合計金額\n";
     salesSummary.value.forEach((s) => {
-      csv += [`"${s.title}"`, s.quantity, s.total].join(",") + "\n";
+      csv += [escapeCSV(s.title), s.quantity, s.total].join(",") + "\n";
     });
 
     csv += `\n"合計",${totalQuantity.value},${totalAmount.value}`;
