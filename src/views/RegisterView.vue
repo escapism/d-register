@@ -3,7 +3,7 @@ import {
   ref,
   useTemplateRef,
   watch,
-  onMounted,
+  onBeforeMount,
   computed,
   inject,
   reactive,
@@ -52,7 +52,7 @@ const orderSummary = ref<{ title: string; count: number }[]>([]);
 
 const confirmed = ref(localStorage.getItem("confirmed"));
 
-onMounted(async () => {
+onBeforeMount(async () => {
   allCategories.value = await fetchTerms("category");
   allGenres.value = await fetchTerms("genre");
 

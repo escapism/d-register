@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, onMounted, watch, inject } from "vue";
+import { ref, onBeforeMount, watch, inject } from "vue";
 import { useRoute } from "vue-router";
 import { db, type Term } from "@/db";
 import { selectAllText } from "@/utils/productHelper";
@@ -29,7 +29,7 @@ watch(isSaving, (val) => {
   }
 });
 
-onMounted(async () => {
+onBeforeMount(async () => {
   const opt = await db.options.get("productDefault");
   if (opt && opt.value) {
     productDefault.value = { ...PRODUCT_DEFAULT, ...opt.value };
@@ -60,17 +60,6 @@ const saveSettings = async () => {
       isSaving.value = false;
     }, SAVING_DELAY);
   }
-};
-
-// カテゴリー表示用の補助関数
-const categoriesStr = () => {
-  const ids = productDefault.value.terms?.category || [];
-  return (
-    ids
-      .map((id: number) => allCategories.value.find((c) => c.id === id)?.name)
-      .filter(Boolean)
-      .join(", ") || "未選択"
-  );
 };
 </script>
 <template>

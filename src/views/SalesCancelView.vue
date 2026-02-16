@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, onMounted, computed, inject } from "vue";
+import { ref, onBeforeMount, computed, inject } from "vue";
 import { useRoute } from 'vue-router';
 import { db } from "@/db";
 import { gtmTrackEvent, gtmTrackError } from "@/utils/gtm.ts";
@@ -12,7 +12,7 @@ const loadSales = async () => {
   sales.value = await db.sales.toArray();
 };
 
-onMounted(loadSales);
+onBeforeMount(loadSales);
 
 // 精算IDごとにグループ化（新しい順）
 const historyGroups = computed(() => {

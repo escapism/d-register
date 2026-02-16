@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, onMounted, computed, inject } from "vue";
+import { ref, onBeforeMount, computed, inject } from "vue";
 import { useRoute } from 'vue-router';
 import { db, type Product } from "@/db";
 import { EXPORT_DELAY } from "@/const/number";
@@ -23,7 +23,7 @@ const loadSales = async () => {
   sales.value = await db.sales.toArray();
 };
 
-onMounted(async () => {
+onBeforeMount(async () => {
   await loadSales();
 
   const [pData, nameOpt] = await Promise.all([

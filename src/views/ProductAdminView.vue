@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, onMounted, watch, inject, nextTick, computed, useTemplateRef } from "vue";
+import { ref, onBeforeMount, onMounted, watch, inject, nextTick, computed, useTemplateRef } from "vue";
 import { useRoute } from "vue-router";
 import { db, type Product, type Term } from "@/db";
 import { convertToBase64, getResizedBlob } from "@/utils/imageHelper";
@@ -61,7 +61,7 @@ watch(isSaving, (val) => {
 });
 
 // 初期表示
-onMounted(async () => {
+onBeforeMount(async () => {
   // デフォルト設定
   const defaultOpt = await db.options.get("productDefault");
   if (defaultOpt && defaultOpt.value) {
@@ -87,6 +87,9 @@ onMounted(async () => {
     const ids = allProducts.map((p) => p.id);
     tempId = Math.max(...ids);
   }
+})
+
+onMounted(() => {
   headerHeight = parseInt(getComputedStyle(document.documentElement).getPropertyValue('--header-height'));
 });
 

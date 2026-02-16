@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, onMounted, watch, inject } from "vue";
+import { ref, onBeforeMount, onMounted, watch, inject } from "vue";
 import { useRoute } from "vue-router";
 import { db } from "@/db";
 import { exportToJson, importFromJson } from "@/composables/useFileIO";
@@ -54,7 +54,7 @@ const loadOptions = async () => {
 };
 
 // 初期ロード
-onMounted(loadOptions);
+onBeforeMount(loadOptions);
 
 // 設定保存
 const saveSettings = async () => {
