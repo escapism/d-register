@@ -45,9 +45,9 @@ if (!localStorage.getItem("confirmed")) {
     </section>
     <section>
       <h2>🔧 専用ツール</h2>
-      <p>パソコンなどの大きな画面で一括で頒布物を編集したい方のために、外部ツール「<a href="https://escapism.github.io/d-regi-editor/" target="_blank">Dレジエディター</a>」を用意しています。</p>
+      <p>パソコンなどの大きな画面で一括で頒布物を編集したい方のために、外部ツール「<a href="https://escapism.github.io/d-regi-editor/" target="_blank" rel="noopener">Dレジエディター</a>」を用意しています。</p>
       <p>一から頒布物情報を作成、またはエクスポートしたJSONファイルを読み込んで、表計算ライクな画面で編集ができます。<br>
-        同一ブラウザ内であればDレジの頒布物情報を直接インポートすることも可能です（iPhone・iPadでホーム画面に追加した場合は直接インポートはできません）。</p>
+        同一ブラウザ内であればDレジの頒布物情報を直接インポートすることも可能です（iPhone・iPadでホーム画面に追加した場合は、ブラウザからはインポートできません。アプリ内WebViewからはインポートできます）。</p>
     </section>
     <section>
       <h2>📈 アクセス解析</h2>
