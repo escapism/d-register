@@ -34,6 +34,10 @@ const toggleMeta = () => {
   props.item.showMeta = !props.item.showMeta;
   gtmTrackEvent("toggle_meta");
 };
+
+const handleAddTerm = async (newTerm: Omit<Term, "id">) => {
+  emit("add:term", newTerm);
+};
 </script>
 
 <template>
@@ -74,7 +78,6 @@ const toggleMeta = () => {
               v-model="item.title"
               class="input-title"
               placeholder="タイトル"
-              @focus="selectAllText"
               type="text"
               :disabled="isSortMode"
             />
@@ -201,23 +204,27 @@ const toggleMeta = () => {
                 </div>
               </dd>
             </div>
-            <div class="edit-item-meta-data__item" v-if="allCategories.length">
+            <div class="edit-item-meta-data__item">
               <dt>カテゴリー</dt>
               <dd>
                 <MultiSelector
                   v-model="item.terms.category"
+                  taxonomy="category"
                   :options="allCategories"
                   :label="'カテゴリー＠' + item.title"
+                  @add:term="handleAddTerm"
                 />
               </dd>
             </div>
-            <div class="edit-item-meta-data__item" v-if="allGenres.length">
+            <div class="edit-item-meta-data__item">
               <dt>ジャンル</dt>
               <dd>
                 <MultiSelector
                   v-model="item.terms.genre"
+                  taxonomy="genre"
                   :options="allGenres"
                   :label="'ジャンル＠' + item.title"
+                  @add:term="handleAddTerm"
                 />
               </dd>
             </div>

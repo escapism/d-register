@@ -46,7 +46,7 @@ defineExpose({ show });
 </script>
 <template>
   <Transition name="fade">
-    <div v-if="isOpen" class="dialog-overlay" @click.self="handleCancel">
+    <div v-if="isOpen" class="dialog-overlay alert-overlay" @click.self="handleCancel">
       <div
         class="alert-dialog"
         role="alertdialog"

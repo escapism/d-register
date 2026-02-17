@@ -404,6 +404,10 @@ main {
   backdrop-filter: blur(1px);
 }
 
+.alert-overlay {
+  z-index: 10000;
+}
+
 .overlay {
   z-index: -1;
   opacity: 0;
@@ -1520,6 +1524,11 @@ main {
   }
 }
 
+.no-terms {
+  font-size: 0.6875em;
+  color: var(--grey);
+}
+
 .product-admin-control {
   justify-content: center;
 }
@@ -1547,6 +1556,9 @@ main {
   align-items: center;
   gap: 0.5em;
   margin: 0 0 2em;
+  .panel-body & {
+    margin-bottom: 1em;
+  }
   h3 {
     grid-area: h;
   }
@@ -1841,6 +1853,11 @@ main {
   input[type="checkbox"] {
     display: none;
   }
+}
+
+.empty-msg {
+  margin-bottom: 1em;
+  text-align: center;
 }
 
 .option-check {

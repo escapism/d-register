@@ -6,6 +6,7 @@ import draggable from "vuedraggable";
 import { gtmTrackEvent, gtmTrackError } from "@/utils/gtm.ts";
 import { TAXONOMY_DEFINITIONS, type TaxonomyName } from "@/const/taxonomy";
 import { fetchTerms } from "@/composables/useTerms";
+import { addTerm } from "@/utils/termHelper";
 
 const route = useRoute();
 const terms = ref<Term[]>([]);
@@ -38,7 +39,7 @@ watchEffect(() => {
 });
 
 // 項目の追加
-const addTerm = async (event?: KeyboardEvent) => {
+const handleAddTerm = async (event?: KeyboardEvent) => {
   // IME変換中のEnterキー入力を無視する
   if (event && event.isComposing) return;
 
@@ -46,29 +47,16 @@ const addTerm = async (event?: KeyboardEvent) => {
   if (!name) return;
 
   // 重複チェック
-  const exists = await db.terms
-    .where({ taxonomy: taxonomy.value, name: name })
-    .count();
-
-  if (exists > 0) {
-    openDialog(`その${definition.value.label}名は既に登録されています`);
+  const id = await addTerm(taxonomy.value, name, terms.value.length);
+  if (id === 0) {
+    await openDialog(`その${definition.value.label}名は既に登録されています`);
     return;
-  }
-
-  const newTerm: Omit<Term, "id"> = {
-    taxonomy: taxonomy.value,
-    name: newTermName.value,
-    sortOrder: terms.value.length,
-  };
-
-  try {
-    const id = await db.terms.add(newTerm as Term);
-    terms.value.push({ ...newTerm, id, current_name: newTerm.name } as Term);
+  } else if (id === -1) {
+    await openDialog("保存に失敗しました。再読込してください。");
+  } else {
+    terms.value.push({ id, name: name, taxonomy: taxonomy.value, sortOrder: terms.value.length, current_name: name } as Term);
     newTermName.value = ""
     gtmTrackEvent("add_" + taxonomy.value);
-  } catch (err) {
-    console.error(err);
-    gtmTrackError("add_" + taxonomy.value);
   }
 };
 
@@ -192,9 +180,9 @@ const ariaCurrent = computed(() => (tax) => {
         type="text"
         v-model="newTermName"
         :placeholder="definition.placeholder"
-        @keydown.enter="addTerm($event)"
+        @keydown.enter="handleAddTerm($event)"
       />
-      <button class="btn" @click="addTerm" :disabled="!newTermName.trim()">
+      <button class="btn" @click="handleAddTerm" :disabled="!newTermName.trim()">
         追加
       </button>
     </section>

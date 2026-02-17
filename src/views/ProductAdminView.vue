@@ -13,6 +13,8 @@ import { getDateValue } from "@/utils/dateHelper";
 import ProductAdminItem from "@/components/ProductAdminItem.vue";
 import TermFilterGroup from "@/components/TermFilterGroup.vue";
 import { fetchTerms } from "@/composables/useTerms";
+import { addTerm } from "@/utils/termHelper";
+import { TAXONOMY_DEFINITIONS } from "@/const/taxonomy";
 
 const openDialog = inject("globalDialog");
 const popped = inject("globalPopup");
@@ -328,6 +330,25 @@ const toggleSortMode = () => {
   isSortMode.value = !isSortMode.value;
   gtmTrackEvent("toggle_sort_mode");
 };
+
+// ターム追加
+const handleAddTerm = async (newTerm: Omit<Term, "id">, item: EditableProduct) => {
+  const id = await addTerm(newTerm.taxonomy, newTerm.name, newTerm.sortOrder);
+  if (id === 0) {
+    await openDialog(`その${TAXONOMY_DEFINITIONS[newTerm.taxonomy].label}名は既に登録されています`);
+    return;
+  } else if (id === -1) {
+    await openDialog("保存に失敗しました。再読込してください。");
+  } else {
+    item.terms[newTerm.taxonomy] ? item.terms[newTerm.taxonomy].push(id) : item.terms[newTerm.taxonomy] = [id];
+    if (newTerm.taxonomy === "category") {
+      allCategories.value = await fetchTerms("category");
+    } else if (newTerm.taxonomy === "genre") {
+      allGenres.value = await fetchTerms("genre");
+    }
+    gtmTrackEvent("add_term");
+  }
+};
 </script>
 
 <template>
@@ -427,6 +448,7 @@ const toggleSortMode = () => {
           @file-change="onFileChange"
           @remove="removeProduct"
           @move="moveItem"
+          @add:term="handleAddTerm($event, item)"
         />
       </template>
     </draggable>

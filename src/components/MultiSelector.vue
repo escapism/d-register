@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { ref, computed } from "vue";
+import { TAXONOMY_DEFINITIONS, type TaxonomyName } from "@/const/taxonomy";
 
 // 汎用的な選択肢の型
 interface SelectOption {
@@ -12,10 +13,16 @@ const props = defineProps<{
   options: SelectOption[]; // 選択肢のリスト
   placeholder?: string; // 未選択時の表示
   label?: string; // ダイアログ内のタイトル
+  taxonomy?: TaxonomyName;
 }>();
+
+const definition = computed(() => props.taxonomy ? TAXONOMY_DEFINITIONS[props.taxonomy] : undefined);
+
+const newTermName = ref("");
 
 const emit = defineEmits<{
   (e: "update:modelValue", value: (number | string)[]): void;
+  (e: "add:term", value: string): void;
 }>();
 
 const active = ref(false);
@@ -44,14 +51,28 @@ const handleCheck = (id: number | string, checked: boolean) => {
     const index = newValue.indexOf(id);
     if (index > -1) newValue.splice(index, 1);
   }
-  
+
   // options の並び順に従ってソート
-  const orderMap = props.options.map(opt => opt.id);
+  const orderMap = props.options.map((opt) => opt.id);
   newValue.sort((a, b) => {
     return orderMap.indexOf(a) - orderMap.indexOf(b);
   });
 
   emit("update:modelValue", newValue);
+};
+
+const handleAddTerm = async () => {
+  const name = newTermName.value.trim();
+  if (!name) return;
+
+  const newTerm: Omit<Term, "id"> = {
+    taxonomy: props.taxonomy,
+    name: newTermName.value,
+    sortOrder: props.options.length,
+  };
+
+  emit("add:term", newTerm);
+  newTermName.value = "";
 };
 </script>
 
@@ -76,6 +97,26 @@ const handleCheck = (id: number | string, checked: boolean) => {
         <div role="dialog" class="confirm-dialog" tabindex="-1">
           <h3 class="panel-header">{{ label || "項目を選択" }}</h3>
           <div class="panel-body">
+            <section
+              class="add-term"
+              v-if="definition"
+              :aria-label="`${definition.label}を追加`"
+            >
+              <input
+                type="text"
+                v-model="newTermName"
+                :placeholder="definition.placeholder"
+                @keydown.enter="handleAddTerm($event)"
+              />
+
+              <button
+                class="btn"
+                @click="handleAddTerm"
+                :disabled="!newTermName.trim()"
+              >
+                追加
+              </button>
+            </section>
             <ul class="option-list">
               <li v-for="opt in options" :key="opt.id">
                 <label>

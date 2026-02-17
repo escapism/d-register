@@ -86,7 +86,6 @@ const saveSettings = async () => {
                 v-model="productDefault.title"
                 class="input-title"
                 placeholder="タイトル"
-                @focus="selectAllText"
                 type="text"
               />
             </dd>
@@ -132,7 +131,10 @@ const saveSettings = async () => {
         </dl>
         <div class="edit-item__controls">
           <label class="edit-item__visibility toggle-btn">
-            <i-octicon-eye-24 v-show="!productDefault.hidden" aria-label="表示" />
+            <i-octicon-eye-24
+              v-show="!productDefault.hidden"
+              aria-label="表示"
+            />
             <i-octicon-eye-closed-24
               v-show="productDefault.hidden"
               aria-label="非表示"
@@ -185,30 +187,28 @@ const saveSettings = async () => {
                   </div>
                 </dd>
               </div>
-              <div
-                class="edit-item-meta-data__item"
-                v-if="allCategories.length"
-              >
+              <div class="edit-item-meta-data__item">
                 <dt>カテゴリー</dt>
                 <dd>
                   <MultiSelector
+                    v-if="allCategories.length"
                     v-model="productDefault.terms.category"
                     :options="allCategories"
                     label="デフォルトカテゴリー"
                   />
+                  <div v-else class="no-terms">選択肢がありません</div>
                 </dd>
               </div>
-              <div
-                class="edit-item-meta-data__item"
-                v-if="allGenres.length"
-              >
+              <div class="edit-item-meta-data__item">
                 <dt>ジャンル</dt>
                 <dd>
                   <MultiSelector
+                    v-if="allGenres.length"
                     v-model="productDefault.terms.genre"
                     :options="allGenres"
                     label="デフォルトジャンル"
                   />
+                  <div v-else class="no-terms">選択肢がありません</div>
                 </dd>
               </div>
               <div class="edit-item-meta-data__item">
