@@ -9,12 +9,6 @@ import { getPageLocation } from "@/utils/gtm.ts";
 // Service Workerの登録
 registerSW({
   immediate: true,
-  onRegistered(r) {
-    console.log("SW Registered: ", r);
-  },
-  onRegisterError(error) {
-    console.log("SW registration error", error);
-  },
 });
 
 const app = createApp(App);
