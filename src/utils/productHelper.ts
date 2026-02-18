@@ -1,9 +1,9 @@
 import {
-  getResizedBlob,
+  getResizedBase64,
   convertToBase64,
 } from "@/utils/imageHelper";
 import { sanitizeDate } from "@/utils/dateHelper";
-import { db } from "@/db";
+import { db, type Product } from "@/db";
 import { TAXONOMY_NAMES } from "@/const/taxonomy";
 
 /**
@@ -40,15 +40,17 @@ export async function formatProductForSave(item, index = 0) {
 /**
  * インポートされた生データを、アプリ内で使える形式にクリーニングする
  */
-export async function sanitizeImportedProduct(data) {
-  let imageContent = data.image || "";
+export async function sanitizeImportedProduct(data: Product) {
+  const imageContent = String(data.image || "");
 
   if (imageContent.startsWith("data:")) {
     // 自前データ（Base64）の場合
-    imageContent = await getResizedBlob(data.image);
+    data.image = await getResizedBase64(imageContent);
   } else if (imageContent.startsWith("http")) {
     // 外部URLの場合はそのまま保存
-    imageContent = data.image;
+    data.image = imageContent;
+  } else {
+    data.image = "";
   }
 
   data.pubdate = sanitizeDate(data.pubdate);

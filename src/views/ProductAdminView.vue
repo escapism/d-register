@@ -2,7 +2,6 @@
 import { ref, onBeforeMount, onMounted, watch, inject, nextTick, computed, useTemplateRef } from "vue";
 import { useRoute } from "vue-router";
 import { db, type Product, type Term } from "@/db";
-import { convertToBase64, getResizedBlob } from "@/utils/imageHelper";
 import { formatProductForSave, productEqual, formatProductsForExport } from "@/utils/productHelper";
 import { exportToJson, importFromJson } from "@/composables/useFileIO";
 import draggable from "vuedraggable";
@@ -120,20 +119,6 @@ const filteredProducts = computed({
   },
 });
 
-// 画像選択
-const onFileChange = async (e: Event, index: number) => {
-  const file = (e.target as HTMLInputElement).files?.[0];
-  if (!file) return;
-
-  const tempUrl = URL.createObjectURL(file);
-  const resizedBlob = await getResizedBlob(tempUrl);
-  URL.revokeObjectURL(tempUrl);
-
-  if (resizedBlob) {
-    editableProducts.value[index].image = await convertToBase64(resizedBlob);
-  }
-};
-
 // 保存
 const saveAll = async () => {
   if (isSaving.value) return; // 二重送信防止
@@ -231,6 +216,7 @@ const importJSON = async (e: Event) => {
   if (!file) return;
 
   try {
+    loader(true);
     const importedRaw = await importFromJson(file, "products");
 
     // インポートされた各商品に対してクリーンアップを実行
@@ -252,10 +238,12 @@ const importJSON = async (e: Event) => {
     allCategories.value = await fetchTerms("category");
     allGenres.value = await fetchTerms("genre");
 
+    loader(false);
     isImported.value = true; // インポートフラグ
     gtmTrackEvent("import_products");
     await openDialog("インポートしました。保存ボタンを押すと確定します。");
   } catch (err) {
+    loader(false);
     gtmTrackError("import_products");
     await openDialog("JSONの読み込みに失敗しました。");
   } finally {
@@ -346,7 +334,6 @@ const handleAddTerm = async (newTerm: Omit<Term, "id">, item: EditableProduct) =
     } else if (newTerm.taxonomy === "genre") {
       allGenres.value = await fetchTerms("genre");
     }
-    gtmTrackEvent("add_term");
   }
 };
 </script>
@@ -445,7 +432,6 @@ const handleAddTerm = async (newTerm: Omit<Term, "id">, item: EditableProduct) =
           :all-genres="allGenres"
           :total-products="editableProducts.length"
           :enable-r18="!!productDefault.enableR18"
-          @file-change="onFileChange"
           @remove="removeProduct"
           @move="moveItem"
           @add:term="handleAddTerm($event, item)"

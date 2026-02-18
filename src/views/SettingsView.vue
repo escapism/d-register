@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, onBeforeMount, onMounted, watch, inject } from "vue";
+import { ref, onBeforeMount, watch, inject } from "vue";
 import { useRoute } from "vue-router";
 import { db } from "@/db";
 import { exportToJson, importFromJson } from "@/composables/useFileIO";
@@ -136,6 +136,7 @@ const importAllData = async (e: Event) => {
     return;
 
   try {
+    loader(true);
     const data = await importFromJson(file);
 
     await db.transaction(
@@ -173,13 +174,14 @@ const importAllData = async (e: Event) => {
         }
       },
     );
-
+    loader(false);
     gtmTrackEvent("import_app_data");
     await openDialog("インポートが完了しました。");
     resetOptions();
     await loadOptions();
   } catch (err) {
     console.error(err);
+    loader(false);
     gtmTrackError("import_app_data");
     await openDialog(
       "読み込みに失敗しました。正しいJSONファイルか確認してください。",

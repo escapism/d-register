@@ -4,6 +4,7 @@ import type { Term } from "@/db";
 import { selectAllText } from "@/utils/productHelper";
 import { gtmTrackEvent } from "@/utils/gtm.ts";
 import MultiSelector from "@/components/MultiSelector.vue";
+import { getResizedBase64 } from "@/utils/imageHelper";
 
 const props = defineProps<{
   item: any; // EditableProduct
@@ -16,18 +17,26 @@ const props = defineProps<{
 }>();
 
 const emit = defineEmits<{
-  (e: 'file-change', event: Event, index: number): void;
+  (e: 'add:term', newTerm: Omit<Term, "id">): void;
   (e: 'remove', index: number): void;
   (e: 'move', index: number, direction: 'up' | 'down'): void;
   (e: 'toggle-meta', tempId: number, index: number, el: HTMLElement | null): void;
   (e: 'gtm-event', action: string): void;
 }>();
 
-const onImageClick = (e: MouseEvent) => {
+const fileInput = useTemplateRef("fileInput")
+
+const onImageClick = () => {
   fileInput.value?.click();
 };
 
-const fileInput = useTemplateRef("fileInput")
+const onFileChange = async (e: Event) => {
+  const file = (e.target as HTMLInputElement).files?.[0];
+  if (!file) return;
+
+ props.item.image = await getResizedBase64(file);
+ gtmTrackEvent("select_image");
+};
 
 // メタトグル
 const toggleMeta = () => {
@@ -35,8 +44,9 @@ const toggleMeta = () => {
   gtmTrackEvent("toggle_meta");
 };
 
-const handleAddTerm = async (newTerm: Omit<Term, "id">) => {
+const handleAddTerm = (newTerm: Omit<Term, "id">) => {
   emit("add:term", newTerm);
+  gtmTrackEvent(`add_${newTerm.taxonomy}_in_selector`);
 };
 </script>
 
@@ -50,7 +60,7 @@ const handleAddTerm = async (newTerm: Omit<Term, "id">) => {
     ></div>
 
     <div class="edit-item-inner">
-      <div class="edit-item__image" @click="onImageClick">
+      <div class="edit-item__image" @click="onImageClick" @keydown.enter="onImageClick" tabindex="0">
         <i-octicon-file-media-24
           class="edit-item__image-icon"
           aria-label="画像"
@@ -65,9 +75,9 @@ const handleAddTerm = async (newTerm: Omit<Term, "id">) => {
           type="file"
           accept="image/*"
           :disabled="isSortMode"
-          @change="emit('file-change', $event, index)"
+          @change="onFileChange"
         />
-        <span class="btn btn-file">画像を選択</span>
+        <span class="btn btn-file">{{ item.image ? "画像を変更" : "画像を選択" }}</span>
       </div>
 
       <dl class="edit-item-data">

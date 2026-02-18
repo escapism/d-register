@@ -28,30 +28,15 @@ async function imageConverter(img: HTMLImageElement, max_size: number = 480) {
     } else {
       canvas.height = max_size;
       canvas.width = Math.round(max_size / aspectRatio);
-
     }
 
-    ctx?.drawImage(img, 0, 0, canvas.width, canvas.height);
+    ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
 
     return canvas;
   } catch (e) {
     console.error("Image conversion failed:", e);
     return false;
   }
-}
-
-/**
- * Base64文字列を再圧縮せずにそのままBlobに変換する
- */
-export function base64ToBlob(base64: string): Blob {
-  const [header, data] = base64.split(",");
-  const mime = header?.match(/:(.*?);/)?.[1] || "image/png";
-  const bin = atob(data);
-  const buf = new Uint8Array(bin.length);
-  for (let i = 0; i < bin.length; i++) {
-    buf[i] = bin.charCodeAt(i);
-  }
-  return new Blob([buf], { type: mime });
 }
 
 /**
@@ -67,42 +52,45 @@ export async function getImage(url: string): Promise<HTMLImageElement> {
   });
 }
 
-/**
- * リサイズしたBlobを取得
+/** 
+ * リサイズしたBase64文字列を取得
  */
-export async function getResizedBlob(url: string): Promise<Blob | null> {
-  // すでに制限サイズ以下なら、変換せず元のデータをBlobとして取得
-  const img = await getImage(url)
+export async function getResizedBase64(data: string | Blob): Promise<string> {
+  const dataURL : string | null = data instanceof Blob ? await convertToBase64(data) : data;
+  if (!dataURL) return "";
+  const type = dataURL.split(":")[1].split(";")[0] || "image/jpeg";
+
+  const img = await getImage(dataURL);
+
   const aspectRatio = img.height / img.width
-  if ((aspectRatio >= 1 && img.width <= MAX_IMAGE_SIZE) || (aspectRatio <1 && img.height <= MAX_IMAGE_SIZE)) {
-    const response = await fetch(url);
-    return await response.blob();
+  const typeCheck = (() => {
+    if (type === "image/webp") {
+      return true;
+    } else if (!isCanvasSupportedWebp()) {
+      return type === "image/jpeg";
+    }
+    return false;
+  })()
+
+  // 規定サイズ以下かつWebpならならそのまま返す
+  if (typeCheck && ((aspectRatio >= 1 && img.width <= MAX_IMAGE_SIZE) || (aspectRatio < 1 && img.height <= MAX_IMAGE_SIZE))) {
+    return dataURL;
   }
 
   const canvas = await imageConverter(img, MAX_IMAGE_SIZE);
-  if (!canvas) return null;
+  if (!canvas) return "";
 
-  return new Promise((resolve) => {
-    // ブラウザが対応していればwebp、そうでなければjpegで書き出し
-    const type = isCanvasSupportedWebp() ? "image/webp" : "image/jpeg";
-    canvas.toBlob(
-      (blob) => {
-        resolve(blob);
-      },
-      type,
-      0.8,
-    ); // 品質を0.8程度に設定
-  });
+ return canvas.toDataURL(isCanvasSupportedWebp() ? "image/webp" : "image/jpeg", 0.75);
 }
 
 /**
- * BlobをBase64文字列に変換する（保存時のみ使用）
+ * BlobをBase64文字列に変換する
  */
-export async function convertToBase64(blob: Blob | undefined) {
+export async function convertToBase64(blob: Blob): Promise<string | null> {
   if (!blob || !(blob instanceof Blob)) return blob;
   return new Promise((resolve) => {
     const reader = new FileReader();
-    reader.onloadend = () => resolve(reader.result);
+    reader.onloadend = () => resolve(reader.result as string);
     reader.readAsDataURL(blob);
   });
 }
