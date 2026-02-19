@@ -86,6 +86,7 @@ const onImageClick = (e: MouseEvent) => {
   ) {
     props.item.image = null;
     imageControls.value.classList.remove("is-swiping");
+    gtmTrackEvent("remove_image");
   } else {
     fileInput.value?.click();
   }
