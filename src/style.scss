@@ -733,9 +733,11 @@ main {
 .filter-block {
   display: grid;
   grid-template-columns: 1fr auto;
+  margin: 0 auto;
 }
 
 .register-filter {
+  max-width: $pc;
   margin-bottom: 1px;
   padding: 0.25em 0;
 }
@@ -807,7 +809,7 @@ main {
       font-size: min(16px, 8.226221cqi);
     }
   }
-  &__title {
+  &-title {
     position: absolute;
     top: 0;
     left: 0;
@@ -821,7 +823,7 @@ main {
     white-space: nowrap;
     text-overflow: ellipsis;
   }
-  &__image {
+  &-image {
     position: relative;
     aspect-ratio: 1/1;
     overflow: hidden;
@@ -847,7 +849,7 @@ main {
       color: #fff;
     }
   }
-  &__alt {
+  &-alt {
     display: grid;
     width: 100%;
     height: 100%;
@@ -859,7 +861,7 @@ main {
     font-size: 1.75em;
     word-break: break-all;
   }
-  &__price {
+  &-price {
     position: absolute;
     bottom: 0;
     right: 0;
@@ -873,7 +875,7 @@ main {
     color: #fff;
     font-size: 0.875em;
   }
-  &__control {
+  &-control {
     display: grid;
     grid-area: control;
     grid-template-areas: "sub input add";
@@ -888,7 +890,7 @@ main {
       filter: brightness(0.5);
     }
   }
-  &__order {
+  &-order {
     line-height: 1.7143;
     padding: 0 0.25em;
     border-radius: 2em;
@@ -938,7 +940,7 @@ main {
   left: $p;
   z-index: 5;
   width: 1.75em;
-  .product-item__title + & {
+  .product-item-title + & {
     top: $p + 1.75em;
   }
 }
@@ -1199,9 +1201,10 @@ main {
     transform: scale(1.1); /* 少し大きくして浮いている感を出す */
     box-shadow: 0 0 4.52cqi rgba(0, 0, 0, 0.5);
   }
-  &__image {
+  &-image {
     position: relative;
     grid-area: image;
+    overflow: hidden;
     cursor: pointer;
     &[aria-hidden="true"] {
       cursor: initial;
@@ -1230,6 +1233,16 @@ main {
         width: 25%;
       }
     }
+    &-controls {
+      position: relative;
+      margin-top: 0.334em;
+      transition: transform 0.3s;
+      font-size: 0.75em;
+      touch-action: none;
+      &.is-swiping {
+        transform: translate(-2.5em, 0);
+      }
+    }
     img {
       width: 100%;
       height: 100%;
@@ -1239,7 +1252,7 @@ main {
       display: none;
     }
   }
-  &__controls {
+  &-controls {
     display: grid;
     grid-area: controls;
     grid-template-areas: "order visible remove";
@@ -1248,16 +1261,16 @@ main {
     align-self: end;
     gap: 0.75em;
   }
-  &__visibility {
+  &-visibility {
     grid-area: visible;
   }
-  &__order {
+  &-order {
     display: flex;
     grid-area: order;
     gap: 0.25em;
   }
   @media screen and (min-width: $midTablet) {
-    &--default {
+    &-default {
       width: calc((100% - 1rem) / 2);
     }
     &-inner {
@@ -1265,7 +1278,7 @@ main {
     }
   }
   @media screen and (min-width: $pc) {
-    &--default {
+    &-default {
       width: calc((100% - 2rem) / 3);
     }
   }
@@ -1305,9 +1318,9 @@ main {
 
 .is-sort-mode {
   :is(
-    .edit-item__image .btn,
-    .edit-item__image svg,
-    .edit-item__controls,
+    .edit-item-image .btn,
+    .edit-item-image svg,
+    .edit-item-controls,
     .edit-item-data,
     .edit-item-meta
   ) {
@@ -1351,7 +1364,7 @@ main {
     margin-bottom: 0.286em;
     font-size: 0.875em;
   }
-  &__stock {
+  &-stock {
     display: flex;
     flex-wrap: wrap;
     align-items: center;
@@ -1399,12 +1412,17 @@ main {
 
 .btn-file {
   width: 100%;
-  margin-top: 0.334em;
   background: var(--blue);
-  font-size: 0.75em;
-  &.btn-file-remove {
-    background: var(--red);
-  }
+}
+
+.btn-remove-file {
+  position: absolute;
+  top: 0;
+  left: 100%;
+  height: 100%;
+  margin-left: 0.5em;
+  background: var(--red);
+  padding-inline: 0.5em;
 }
 
 .btn-remove-item {
@@ -1415,7 +1433,7 @@ main {
 
 .edit-item-meta {
   grid-area: meta;
-  &__open {
+  &-open {
     display: flex;
     align-items: center;
     justify-content: center;
@@ -1435,7 +1453,7 @@ main {
       }
     }
   }
-  &__content {
+  &-content {
     display: grid;
     grid-template-rows: 0fr;
     overflow: hidden;
@@ -1454,7 +1472,7 @@ main {
   grid-template-columns: auto 1fr auto 1fr;
   gap: 0.5em 1em;
   overflow: hidden;
-  &__item {
+  &-item {
     display: grid;
     grid-column: span 2;
     grid-template-columns: subgrid;
@@ -1572,7 +1590,7 @@ main {
   gap: 0.5em;
   margin: 0;
   padding: 0;
-  &__item {
+  &-item {
     display: grid;
     grid-template-areas: "handle input update remove";
     grid-template-columns: auto 1fr auto auto;

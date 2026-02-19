@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { useTemplateRef } from "vue";
+import { useTemplateRef, onMounted } from "vue";
 import type { Term } from "@/db";
 import { selectAllText } from "@/utils/productHelper";
 import { gtmTrackEvent } from "@/utils/gtm.ts";
@@ -17,25 +17,86 @@ const props = defineProps<{
 }>();
 
 const emit = defineEmits<{
-  (e: 'add:term', newTerm: Omit<Term, "id">): void;
-  (e: 'remove', index: number): void;
-  (e: 'move', index: number, direction: 'up' | 'down'): void;
-  (e: 'toggle-meta', tempId: number, index: number, el: HTMLElement | null): void;
-  (e: 'gtm-event', action: string): void;
+  (e: "add:term", newTerm: Omit<Term, "id">): void;
+  (e: "remove", index: number): void;
+  (e: "move", index: number, direction: "up" | "down"): void;
+  (
+    e: "toggle-meta",
+    tempId: number,
+    index: number,
+    el: HTMLElement | null,
+  ): void;
+  (e: "gtm-event", action: string): void;
 }>();
 
-const fileInput = useTemplateRef("fileInput")
+const fileInput = useTemplateRef("fileInput");
+const imageControls = useTemplateRef("imageControls");
+const removeFileButton = useTemplateRef("removeFileButton");
 
-const onImageClick = () => {
-  fileInput.value?.click();
+let startX: number | null = null;
+let touchmove = false;
+
+onMounted(() => {
+  fileInput.value?.addEventListener("click", (e) => {
+    e.stopPropagation();
+  });
+})
+
+const onImageTouchStart = (e: TouchEvent | MouseEvent) => {
+  if (!props.item.image) return;
+  if (e.touches) {
+    startX = e.touches[0].clientX;
+  } else {
+    startX = e.clientX;
+  }
+};
+
+const onImageTouchMove = (e: TouchEvent | MouseEvent) => {
+  if (!props.item.image) return;
+  if (startX !== null) {
+    touchmove = true;
+    const diffX = (e.touches ? e.touches[0].clientX : e.clientX) - startX;
+  
+    if (diffX < -30) {
+      // 左に大きくスワイプしたら
+      imageControls.value.classList.add("is-swiping");
+    } else if (diffX > 10) {
+      imageControls.value.classList.remove("is-swiping");
+    }
+  }
+}
+
+const onImageTouchEnd = () => {
+  if (!props.item.image) return;
+  if (startX !== null) {
+    startX = null;
+    touchmove = false;
+  }
+}
+const onImageClick = (e: MouseEvent) => {
+  if (startX !== null && touchmove) {
+    startX = null;
+    touchmove = false;
+    return;
+  }
+  if (
+    e.target === imageControls.value ||
+    e.target === removeFileButton.value ||
+    removeFileButton.value?.contains(e.target as Node)
+  ) {
+    props.item.image = null;
+    imageControls.value.classList.remove("is-swiping");
+  } else {
+    fileInput.value?.click();
+  }
 };
 
 const onFileChange = async (e: Event) => {
   const file = (e.target as HTMLInputElement).files?.[0];
   if (!file) return;
 
- props.item.image = await getResizedBase64(file);
- gtmTrackEvent("select_image");
+  props.item.image = await getResizedBase64(file);
+  gtmTrackEvent("select_image");
 };
 
 // メタトグル
@@ -60,13 +121,18 @@ const handleAddTerm = (newTerm: Omit<Term, "id">) => {
     ></div>
 
     <div class="edit-item-inner">
-      <div class="edit-item__image" @click="onImageClick" @keydown.enter="onImageClick" tabindex="0">
+      <div
+        class="edit-item-image"
+        @click="onImageClick"
+        @keydown.enter="onImageClick"
+        tabindex="0"
+      >
         <i-octicon-file-media-24
-          class="edit-item__image-icon"
+          class="edit-item-image-icon"
           aria-label="画像"
           v-if="!item.image"
         />
-        <div class="edit-item__image-container">
+        <div class="edit-item-image-container">
           <img v-if="item.image" :src="item.image" />
           <i-octicon-plus-circle-24 v-else />
         </div>
@@ -77,11 +143,22 @@ const handleAddTerm = (newTerm: Omit<Term, "id">) => {
           :disabled="isSortMode"
           @change="onFileChange"
         />
-        <span class="btn btn-file">{{ item.image ? "画像を変更" : "画像を選択" }}</span>
+        <div class="edit-item-image-controls" ref="imageControls" @touchstart="onImageTouchStart" @touchmove="onImageTouchMove" @touchend="onImageTouchEnd" @mousedown="onImageTouchStart" @mousemove="onImageTouchMove">
+          <div class="btn btn-file">{{
+            item.image ? "画像を変更" : "画像を選択"
+          }}</div>
+          <button
+            class="btn btn-remove-file"
+            aria-label="画像を削除"
+            ref="removeFileButton"
+          >
+            <i-octicon-trash-24 />
+          </button>
+        </div>
       </div>
 
       <dl class="edit-item-data">
-        <div class="edit-item-data__item">
+        <div class="edit-item-data-item">
           <dt>タイトル</dt>
           <dd>
             <input
@@ -93,7 +170,7 @@ const handleAddTerm = (newTerm: Omit<Term, "id">) => {
             />
           </dd>
         </div>
-        <div class="edit-item-data__item">
+        <div class="edit-item-data-item">
           <dt>価格</dt>
           <dd>
             <div class="input-with-unit">
@@ -109,10 +186,10 @@ const handleAddTerm = (newTerm: Omit<Term, "id">) => {
             </div>
           </dd>
         </div>
-        <div class="edit-item-data__item">
+        <div class="edit-item-data-item">
           <dt>在庫</dt>
           <dd>
-            <div class="edit-item-data__stock">
+            <div class="edit-item-data-stock">
               <input
                 v-model.number="item.stock"
                 type="number"
@@ -135,8 +212,8 @@ const handleAddTerm = (newTerm: Omit<Term, "id">) => {
         </div>
       </dl>
 
-      <div class="edit-item__controls">
-        <label class="edit-item__visibility toggle-btn">
+      <div class="edit-item-controls">
+        <label class="edit-item-visibility toggle-btn">
           <i-octicon-eye-24 v-show="!item.hidden" aria-label="表示" />
           <i-octicon-eye-closed-24 v-show="item.hidden" aria-label="非表示" />
           <input
@@ -144,10 +221,10 @@ const handleAddTerm = (newTerm: Omit<Term, "id">) => {
             v-model="item.hidden"
             :true-value="1"
             :false-value="0"
-                  @change="gtmTrackEvent('toggle_visibility')"
+            @change="gtmTrackEvent('toggle_visibility')"
           />
         </label>
-        <div class="edit-item__order">
+        <div class="edit-item-order">
           <button
             class="btn-order"
             @click="emit('move', index, 'up')"
@@ -176,29 +253,30 @@ const handleAddTerm = (newTerm: Omit<Term, "id">) => {
 
       <div class="edit-item-meta">
         <button
-          class="edit-item-meta__open"
+          class="edit-item-meta-open"
           :class="{ 'is-open': item.showMeta }"
           @click="toggleMeta"
         >
           <i-octicon-plus-circle-16 /> 追加情報
         </button>
-        <div
-          class="edit-item-meta__content"
-          :inert="!item.showMeta"
-        >
+        <div class="edit-item-meta-content" :inert="!item.showMeta">
           <dl class="edit-item-meta-data">
-            <div class="edit-item-meta-data__item">
+            <div class="edit-item-meta-data-item">
               <dt>発行日</dt>
               <dd>
                 <label class="input-date">
                   <span>
-                    <input v-model="item.pubdate" type="date" :disabled="isSortMode" />
+                    <input
+                      v-model="item.pubdate"
+                      type="date"
+                      :disabled="isSortMode"
+                    />
                   </span>
                   <i-octicon-calendar-16 />
                 </label>
               </dd>
             </div>
-            <div class="edit-item-meta-data__item">
+            <div class="edit-item-meta-data-item">
               <dt>印刷費</dt>
               <dd>
                 <div class="input-with-unit">
@@ -214,7 +292,7 @@ const handleAddTerm = (newTerm: Omit<Term, "id">) => {
                 </div>
               </dd>
             </div>
-            <div class="edit-item-meta-data__item">
+            <div class="edit-item-meta-data-item">
               <dt>カテゴリー</dt>
               <dd>
                 <MultiSelector
@@ -226,7 +304,7 @@ const handleAddTerm = (newTerm: Omit<Term, "id">) => {
                 />
               </dd>
             </div>
-            <div class="edit-item-meta-data__item">
+            <div class="edit-item-meta-data-item">
               <dt>ジャンル</dt>
               <dd>
                 <MultiSelector
@@ -238,7 +316,7 @@ const handleAddTerm = (newTerm: Omit<Term, "id">) => {
                 />
               </dd>
             </div>
-            <div v-if="enableR18" class="edit-item-meta-data__item">
+            <div v-if="enableR18" class="edit-item-meta-data-item">
               <dt>R18</dt>
               <dd>
                 <input

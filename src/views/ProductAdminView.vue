@@ -1,8 +1,21 @@
 <script setup lang="ts">
-import { ref, onBeforeMount, onMounted, watch, inject, nextTick, computed, useTemplateRef } from "vue";
+import {
+  ref,
+  onBeforeMount,
+  onMounted,
+  watch,
+  inject,
+  nextTick,
+  computed,
+  useTemplateRef,
+} from "vue";
 import { useRoute } from "vue-router";
 import { db, type Product, type Term } from "@/db";
-import { formatProductForSave, productEqual, formatProductsForExport } from "@/utils/productHelper";
+import {
+  formatProductForSave,
+  productEqual,
+  formatProductsForExport,
+} from "@/utils/productHelper";
 import { exportToJson, importFromJson } from "@/composables/useFileIO";
 import draggable from "vuedraggable";
 import { PRODUCT_DEFAULT } from "@/const/setting";
@@ -27,7 +40,7 @@ interface EditableProduct extends Product {
   showMeta?: boolean;
 }
 
-const editItemList = useTemplateRef("editItemList")
+const editItemList = useTemplateRef("editItemList");
 const editableProducts = ref<EditableProduct[]>([]);
 const allCategories = ref<Term[]>([]);
 const allGenres = ref<Term[]>([]);
@@ -43,7 +56,7 @@ let productDefault = { ...PRODUCT_DEFAULT };
 
 let saved = false;
 let tempId: number = 0;
-let headerHeight = 0
+let headerHeight = 0;
 
 watch(isSortMode, (val) => {
   if (val === true) {
@@ -88,10 +101,14 @@ onBeforeMount(async () => {
     const ids = allProducts.map((p) => p.id);
     tempId = Math.max(...ids);
   }
-})
+});
 
 onMounted(() => {
-  headerHeight = parseInt(getComputedStyle(document.documentElement).getPropertyValue('--header-height'));
+  headerHeight = parseInt(
+    getComputedStyle(document.documentElement).getPropertyValue(
+      "--header-height",
+    ),
+  );
 });
 
 // カテゴリー絞り込み
@@ -195,7 +212,7 @@ const exportJSON = async () => {
       isExporting.value = false;
       return;
     }
-    const formatProducts = await formatProductsForExport(products)
+    const formatProducts = await formatProductsForExport(products);
 
     await exportToJson(formatProducts, `products_backup`);
     setTimeout(() => {
@@ -280,7 +297,7 @@ const addNewProduct = () => {
   gtmTrackEvent("add_product");
 
   nextTick(() => {
-    const top = editItemList.value?.$el.getBoundingClientRect().top
+    const top = editItemList.value?.$el.getBoundingClientRect().top;
     window.scrollTo(0, window.pageYOffset + top - headerHeight);
   });
 };
@@ -320,15 +337,26 @@ const toggleSortMode = () => {
 };
 
 // ターム追加
-const handleAddTerm = async (newTerm: Omit<Term, "id">, item: EditableProduct) => {
-  const id = await addTerm(newTerm.taxonomy, newTerm.name, newTerm.sortOrder);
-  if (id === 0) {
-    await openDialog(`その${TAXONOMY_DEFINITIONS[newTerm.taxonomy].label}名は既に登録されています`);
-    return;
-  } else if (id === -1) {
+const handleAddTerm = async (
+  newTerm: Omit<Term, "id">,
+  item: EditableProduct,
+) => {
+  const id = await addTerm(
+    newTerm.taxonomy,
+    newTerm.name,
+    newTerm.sortOrder
+  );
+  if (id === -1) {
     await openDialog("保存に失敗しました。再読込してください。");
-  } else {
-    item.terms[newTerm.taxonomy] ? item.terms[newTerm.taxonomy].push(id) : item.terms[newTerm.taxonomy] = [id];
+  }
+
+  const newId = id.id ?? id;
+
+  item.terms[newTerm.taxonomy]
+    ? item.terms[newTerm.taxonomy].push(newId)
+    : (item.terms[newTerm.taxonomy] = [newId]);
+
+  if (typeof id === "number") {
     if (newTerm.taxonomy === "category") {
       allCategories.value = await fetchTerms("category");
     } else if (newTerm.taxonomy === "genre") {
@@ -388,14 +416,14 @@ const handleAddTerm = async (newTerm: Omit<Term, "id">, item: EditableProduct) =
     <div class="sort">
       <button
         @click="toggleSortMode"
-        class="sort__mode"
+        class="sort-mode"
         :class="{ 'btn-active': isSortMode }"
       >
         <i-octicon-code-24 /> {{ isSortMode ? "編集に戻る" : "並び替えモード" }}
       </button>
       <button
         @click="sortProducts"
-        class="sort__pudbate"
+        class="sort-pubdate"
         title="発行日が新しい順に並べ替えます"
       >
         <i-octicon-sort-desc-24 /> 発行日順に整列

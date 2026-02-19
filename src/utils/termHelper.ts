@@ -1,14 +1,13 @@
 import { db, type Term } from "@/db";
 import type { TaxonomyName } from "@/const/taxonomy";
 
-export async function addTerm(taxonomy: TaxonomyName, name: string, sortOrder: number = 0): Promise<number> {
+export async function addTerm(taxonomy: TaxonomyName, name: string, sortOrder: number = 0): Promise<number | Term> {
   // 重複チェック
   const exists = await db.terms
-    .where({ taxonomy: taxonomy, name: name })
-    .count();
+    .where({ taxonomy: taxonomy, name: name }).first();
 
-  if (exists > 0) {
-    return 0;
+  if (exists) {
+    return exists;
   }
 
   const newTerm: Omit<Term, "id"> = {

@@ -48,7 +48,7 @@ const handleAddTerm = async (event?: KeyboardEvent) => {
 
   // 重複チェック
   const id = await addTerm(taxonomy.value, name, terms.value.length);
-  if (id === 0) {
+  if (id.id) {
     await openDialog(`その${definition.value.label}名は既に登録されています`);
     return;
   } else if (id === -1) {
@@ -195,11 +195,11 @@ const ariaCurrent = computed(() => (tax) => {
       class="term-list"
     >
       <template #item="{ element }">
-        <li class="term-list__item">
+        <li class="term-list-item">
           <div class="drag-handle">
             <i-octicon-grabber-16 />
           </div>
-          <div class="term-list__name">
+          <div class="term-list-name">
             <input
               v-model="element.name"
               @keydown.enter="updateName(element, $event)"

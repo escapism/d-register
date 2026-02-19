@@ -72,14 +72,14 @@ const saveSettings = async () => {
       </router-link>
     </div>
     <h2>デフォルト設定</h2>
-    <div class="edit-item edit-item--default">
+    <div class="edit-item edit-item-default">
       <div class="edit-item-inner">
-        <div class="edit-item__image" aria-hidden="true">
-          <div class="edit-item__image-container"></div>
+        <div class="edit-item-image" aria-hidden="true">
+          <div class="edit-item-image-container"></div>
         </div>
 
         <dl class="edit-item-data">
-          <div class="edit-item-data__item">
+          <div class="edit-item-data-item">
             <dt>タイトル</dt>
             <dd>
               <input
@@ -90,7 +90,7 @@ const saveSettings = async () => {
               />
             </dd>
           </div>
-          <div class="edit-item-data__item">
+          <div class="edit-item-data-item">
             <dt>価格</dt>
             <dd>
               <div class="input-with-unit">
@@ -105,10 +105,10 @@ const saveSettings = async () => {
               </div>
             </dd>
           </div>
-          <div class="edit-item-data__item">
+          <div class="edit-item-data-item">
             <dt>在庫</dt>
             <dd>
-              <div class="edit-item-data__stock">
+              <div class="edit-item-data-stock">
                 <input
                   v-model="productDefault.stock"
                   type="number"
@@ -129,8 +129,8 @@ const saveSettings = async () => {
             </dd>
           </div>
         </dl>
-        <div class="edit-item__controls">
-          <label class="edit-item__visibility toggle-btn">
+        <div class="edit-item-controls">
+          <label class="edit-item-visibility toggle-btn">
             <i-octicon-eye-24
               v-show="!productDefault.hidden"
               aria-label="表示"
@@ -146,7 +146,7 @@ const saveSettings = async () => {
               :false-value="0"
             />
           </label>
-          <div class="edit-item__order" aria-hidden="true">
+          <div class="edit-item-order" aria-hidden="true">
             <button class="btn-order" disabled>
               <i-octicon-chevron-up-16 />
             </button>
@@ -156,10 +156,10 @@ const saveSettings = async () => {
           </div>
         </div>
         <div class="edit-item-meta">
-          <div class="edit-item-meta__open is-open">追加情報</div>
-          <div class="edit-item-meta__content">
+          <div class="edit-item-meta-open is-open">追加情報</div>
+          <div class="edit-item-meta-content">
             <dl class="edit-item-meta-data">
-              <div class="edit-item-meta-data__item">
+              <div class="edit-item-meta-data-item">
                 <dt>発行日</dt>
                 <dd>
                   <label class="checkbox-label"
@@ -172,7 +172,7 @@ const saveSettings = async () => {
                   >
                 </dd>
               </div>
-              <div class="edit-item-meta-data__item">
+              <div class="edit-item-meta-data-item">
                 <dt>印刷費</dt>
                 <dd>
                   <div class="input-with-unit">
@@ -187,7 +187,7 @@ const saveSettings = async () => {
                   </div>
                 </dd>
               </div>
-              <div class="edit-item-meta-data__item">
+              <div class="edit-item-meta-data-item">
                 <dt>カテゴリー</dt>
                 <dd>
                   <MultiSelector
@@ -199,7 +199,7 @@ const saveSettings = async () => {
                   <div v-else class="no-terms">選択肢がありません</div>
                 </dd>
               </div>
-              <div class="edit-item-meta-data__item">
+              <div class="edit-item-meta-data-item">
                 <dt>ジャンル</dt>
                 <dd>
                   <MultiSelector
@@ -211,7 +211,7 @@ const saveSettings = async () => {
                   <div v-else class="no-terms">選択肢がありません</div>
                 </dd>
               </div>
-              <div class="edit-item-meta-data__item">
+              <div class="edit-item-meta-data-item">
                 <dt>R18</dt>
                 <dd>
                   <input

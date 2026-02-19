@@ -67,7 +67,7 @@ const handleAddTerm = async () => {
 
   const newTerm: Omit<Term, "id"> = {
     taxonomy: props.taxonomy,
-    name: newTermName.value,
+    name: name,
     sortOrder: props.options.length,
   };
 

@@ -27,24 +27,24 @@ const isSoldOut = (item: Product) => !item.infiniteStock && item.stock == 0;
     <div class="product-item-inner">
       <div class="sold-out-label" v-if="isSoldOut(item)"><span>完売</span></div>
       <div class="add-order" @click="emit('add')">
-        <div class="product-item__title" v-if="showTitle && item.title && item.image">
+        <div class="product-item-title" v-if="showTitle && item.title && item.image">
           {{ item.title }}
         </div>
         <img src="@/assets/r18.svg" alt="R18" class="r18" v-if="item?.r18" />
-        <div class="product-item__image">
+        <div class="product-item-image">
           <div class="check" v-if="orderCount">
             <i-octicon-check-16 />
           </div>
           <img :src="item.image" alt="" v-if="item.image" />
-          <div class="product-item__alt" v-else>
+          <div class="product-item-alt" v-else>
             <span>{{ item.title }}</span>
           </div>
-          <div class="product-item__price">{{ item.price }}円</div>
+          <div class="product-item-price">{{ item.price }}円</div>
         </div>
       </div>
 
-      <div class="product-item__control">
-        <div class="product-item__order" :class="{ ordered: orderCount }">
+      <div class="product-item-control">
+        <div class="product-item-order" :class="{ ordered: orderCount }">
           <span>{{ orderCount }}</span>
           <span v-if="showStock && !item.infiniteStock">
             / {{ item.stock }}
