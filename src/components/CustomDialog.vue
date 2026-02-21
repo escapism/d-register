@@ -62,7 +62,6 @@ defineExpose({ show });
           <button
             v-if="type === 'confirm'"
             @click="handleCancel"
-            class="dialog-cancel"
           >
             キャンセル
           </button>

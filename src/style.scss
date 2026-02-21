@@ -139,12 +139,6 @@ svg {
     display: block;
     margin: auto;
   }
-  &.inline {
-    position: relative;
-    top: 0.12em;
-    box-sizing: content-box;
-    padding: 0 0.25em;
-  }
 }
 
 img {
@@ -493,9 +487,6 @@ main {
     width: fit-content;
     text-decoration: none;
   }
-  .next {
-    margin-left: auto;
-  }
 }
 
 .note {
@@ -762,7 +753,7 @@ main {
   > svg {
     margin: 0 0.5em;
   }
-  &.disabled {
+  &.is-disabled {
     > svg {
       opacity: 0.25;
     }
@@ -1167,8 +1158,8 @@ main {
   .is-sort-mode & {
     box-shadow: none;
   }
-  &--default {
-    margin: 0 auto 1rem;
+  &-default {
+    margin-bottom: 1rem;
   }
   &-inner {
     display: grid;
@@ -1272,6 +1263,7 @@ main {
   @media screen and (min-width: $midTablet) {
     &-default {
       width: calc((100% - 1rem) / 2);
+      margin-inline: auto;
     }
     &-inner {
       font-size: min(16px, 4.371585cqi);
@@ -1509,30 +1501,6 @@ main {
     svg {
       display: none;
     }
-  }
-}
-
-.category-selector {
-  position: relative;
-  label {
-    position: absolute;
-    top: 0;
-    right: 0;
-    bottom: 0;
-    left: 0;
-    cursor: pointer;
-  }
-  select {
-    opacity: 0;
-  }
-  input {
-    text-overflow: ellipsis;
-    white-space: nowrap;
-    overflow: hidden;
-    pointer-events: none;
-  }
-  .no-category {
-    color: var(--grey);
   }
 }
 

@@ -79,7 +79,7 @@ const saveSettings = async () => {
         </div>
 
         <dl class="edit-item-data">
-          <div class="edit-item-data-item">
+          <div>
             <dt>タイトル</dt>
             <dd>
               <input
@@ -90,7 +90,7 @@ const saveSettings = async () => {
               />
             </dd>
           </div>
-          <div class="edit-item-data-item">
+          <div>
             <dt>価格</dt>
             <dd>
               <div class="input-with-unit">
@@ -105,7 +105,7 @@ const saveSettings = async () => {
               </div>
             </dd>
           </div>
-          <div class="edit-item-data-item">
+          <div>
             <dt>在庫</dt>
             <dd>
               <div class="edit-item-data-stock">
