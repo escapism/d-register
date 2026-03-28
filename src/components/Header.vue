@@ -161,6 +161,7 @@ const showCirclName = computed(() => {
         </router-link>
       </li>
     </ul>
+    <a href="https://github.com/escapism/d-register/wiki" target="_blank" rel="noopener noreferrer" class="manual-link">オンラインマニュアル<i-octicon-link-external-16 /></a>
     <a href="https://x.com/escapist_uco" class="x-link" target="_blank" rel="noopener noreferrer">
       <svg viewBox="0 0 1200 1227">
         <path

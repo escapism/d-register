@@ -575,8 +575,8 @@ main {
   bottom: 0;
   left: 0;
   z-index: 1000;
-  grid-template-areas: "menu menu" "x x" ". ." "ver reload";
-  grid-template-rows: auto auto 1fr auto;
+  grid-template-areas: "menu menu" "manual manual" "x x" ". ." "ver reload";
+  grid-template-rows: auto auto auto 1fr auto;
   overflow: auto;
   width: var(--menu-width);
   max-width: 360px;
@@ -660,18 +660,25 @@ main {
   }
 }
 
+.manual-link,
 .x-link {
-  display: inline-flex;
+  display: flex;
   grid-area: x;
   align-items: center;
   gap: 0.5em;
-  margin: 1em 0;
+  width: fit-content;
+  margin: .5em 0;
   color: var(--grey);
   font-size: 0.75em;
   text-decoration: none;
   svg {
     width: 1em;
   }
+}
+
+.manual-link {
+  grid-area: manual;
+  margin-top: 1em;
 }
 
 .reload-btn {

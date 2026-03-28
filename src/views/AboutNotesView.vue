@@ -12,7 +12,7 @@ if (!localStorage.getItem("confirmed")) {
     <p>このアプリを利用するにあたって、あらかじめ「ホーム画面に追加」や「アプリのインストール」を行うことをおすすめします。</p>
 
       <ul class="haw-to-install">
-        <li>iOS Safari：「共有」ボタンから「ホーム画面に追加」（iOS 26移行なら「Webアプリとして開く」にチェック）。</li>
+        <li>iOS Safari：「共有」ボタンから「ホーム画面に追加」（iOS 26以降なら「Webアプリとして開く」にチェック）。</li>
         <li>Android Chrome：メニューから「ホーム画面に追加」で「インストール」を選択。</li>
       </ul>
 
